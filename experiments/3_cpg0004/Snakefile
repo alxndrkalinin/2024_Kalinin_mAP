@@ -1,0 +1,72 @@
+import lincs
+configfile: 'config.json'
+
+rule all:
+    input:
+        'outputs/map_technical.csv.gz',
+        'outputs/map_biological.csv.gz'
+
+rule download:
+    output:
+        'inputs/{asset}'
+    params:
+        url=lambda wc: config['assets'][wc.asset]
+    shell:
+        'wget {params.url} -O {output}'
+
+rule merge_labels:
+    input:
+        'inputs/drug_info.txt',
+        'inputs/sample_info.txt'
+    output:
+        'outputs/labels.csv.gz',
+        'outputs/name_mapper.csv.gz'
+    run:
+        lincs.merge_labels(*input, *output)
+
+rule label_profiles:
+    input:
+        'inputs/consensus_profiles.csv.gz',
+        'outputs/labels.csv.gz'
+    output:
+        'outputs/labeled_consensus_profiles.csv.gz'
+    run:
+        lincs.label_profiles(*input, *output)
+
+rule ap_technical:
+    input:
+        'inputs/profiles.csv.gz'
+    output:
+        'outputs/ap_technical.csv.gz'
+    run:
+        lincs.ap_technical(*input, *output)
+
+rule map_technical:
+    input:
+        'outputs/ap_technical.csv.gz'
+    output:
+        'outputs/map_technical.csv.gz'
+    params:
+        sameby = 'Metadata_broad_sample',
+        pvalue_threshold = 0.05,
+    run:
+        lincs.mean_average_precision(*input, *output, **params)
+
+rule ap_biological:
+    input:
+        'outputs/labeled_consensus_profiles.csv.gz'
+    output:
+        'outputs/ap_biological.csv.gz'
+    run:
+        lincs.ap_biological(*input, *output)
+
+rule map_biological:
+    input:
+        'outputs/ap_biological.csv.gz'
+    output:
+        'outputs/map_biological.csv.gz'
+    params:
+        sameby = 'Metadata_target',
+        pvalue_threshold = 0.05,
+    run:
+        lincs.mean_average_precision(*input, *output, **params)

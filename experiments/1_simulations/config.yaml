@@ -1,0 +1,69 @@
+save_file: "results/fig2_reproduce.csv"
+
+seed: 42
+n_perts: 100
+n_permutations: 1000
+n_feats_range: [100, 200, 500, 1000, 2500, 5000]
+
+plates_controls:
+  2: [6, 12, 18]
+  3: [4, 8, 12]
+  4: [3, 6, 9]
+
+control_distribs:
+  gaussian: [0, 1]
+  cauchy: [0, 1]
+
+perturb_distribs:
+  gaussian: [1, 1]
+  # gaussian: [2, 2]
+  cauchy: [10, 1]
+
+distrib_proportions:
+  gaussian: 1.0
+  # gaussian: 0.0
+  # cauchy: 1.0
+
+perturb_params:
+  distribution: "gaussian"
+  # distribution: "cauchy"
+  range_min: 0
+  range_max: 7 
+  step_type: "bin_exp"
+  # range_min: 10 # will start at 1 feature automatically
+  # range_max: 101
+  # step_size: 10
+  # step_type: "linear"
+
+profile_grouping:
+  pos_sameby:
+    all: ["Metadata_Perturbation", "Metadata_Control_Index"]
+    any: []
+  pos_diffby:
+    all: []
+    any: []
+  neg_sameby:
+    all: []
+    any: []
+  neg_diffby:
+    all: ["Metadata_Perturbation", "Metadata_Control_Index"]
+    any: []
+
+metrics_config:
+  mp_value:
+    rescale_pca: True,
+    nb_permutations: ${n_permutations}
+    random_seed: ${seed}
+  mmd:
+    kernel: "rbf"
+    sigma: null
+    nb_permutations: ${n_permutations}
+    random_seed: ${seed}
+  kmeans:
+    init: "random"
+    n_clusters: 2
+    random_seed: ${seed}
+  mean_ap:
+    distance: "cosine"
+    null_size: ${n_permutations}
+    random_seed: ${seed}
