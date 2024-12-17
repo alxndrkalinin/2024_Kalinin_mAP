@@ -6,7 +6,7 @@ paper: "[A versatile information retrieval framework for evaluating profile stre
 ## Getting started
 
 ### System requirements
-copairs supports Python 3.9+ and should work with all modern operating systems (tested with MacOS 13.5, Ubuntu 18.04).
+This repository supports Python 3.9+ and should work with all modern operating systems (tested with MacOS 13.5, Ubuntu 18.04).
 
 ### Dependencies
 This code depends on widely used Python packages:
@@ -19,7 +19,8 @@ This code depends on widely used Python packages:
 * umap-learn
 * scikit-learn
 
-It also uses [pycytominer](https://github.com/alxndrkalinin/pycytominer/tree/fix-ops-custom-features) for profiling data preprocessing and [copairs](https://github.com/cytomining/copairs/tree/v0.4.2) for profile grouping and mAP calculations.
+It also uses [pycytominer](https://github.com/alxndrkalinin/pycytominer/tree/fix-ops-custom-features) for profiling data preprocessing and [copairs](https://github.com/cytomining/copairs/tree/v0.4.3) for profile grouping and mAP calculations.
+
 
 ### Installation
 
@@ -31,6 +32,13 @@ scratch and install the required packages.
 conda create -n map_eval "python>=3.9"
 conda activate map_eval
 pip install .
+```
+
+#### R installation
+Preprocessing of [Perturb-seq data](./experiments/6_perturbseq/) requires creating a separate R environment:
+
+```bash
+conda env create -f perturbseq_processing_environment.yml
 ```
 
 ## Contents
@@ -46,7 +54,7 @@ Each experiment directory  includes brief description of the dataset and scripts
 3. [cpg0004 data](./experiments/3_cpg0004/) (Figures S7A, S7C)
 4. [cpg0016orf data](./experiments/4_cpg0016orf/) (Figures S7B, S7D)
 5. [nELISA data](./experiments/5_nelisa/) (Figures 4A-B)
-6. [PerturbSeq data](./experiments/6_perturbseq/) (Figures 4C-D, S5A-B, S8)
+6. [Perturb-seq data](./experiments/6_perturbseq/) (Figures 4C-D, S5A-B, S8)
 7. [Mitocheck data](./experiments/7_mitocheck/) (Figure 5C-D, S9-10)
 
 ## Citation
