@@ -28,7 +28,7 @@ perturb_params:
   distribution: "gaussian"
   # distribution: "cauchy"
   range_min: 0
-  range_max: 7 
+  range_max: 7
   step_type: "bin_exp"
   # range_min: 10 # will start at 1 feature automatically
   # range_max: 101
