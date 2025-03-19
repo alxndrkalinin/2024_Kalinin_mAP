@@ -47,7 +47,7 @@ rule map_technical:
     output:
         'outputs/map_technical.csv.gz'
     params:
-        sameby = 'Metadata_broad_sample',
+        sameby = ['Metadata_broad_sample'],
         pvalue_threshold = 0.05,
     run:
         lincs.mean_average_precision(*input, *output, **params)
@@ -66,7 +66,7 @@ rule map_biological:
     output:
         'outputs/map_biological.csv.gz'
     params:
-        sameby = 'Metadata_target',
+        sameby = ['Metadata_target'],
         pvalue_threshold = 0.05,
     run:
         lincs.mean_average_precision(*input, *output, **params)

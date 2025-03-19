@@ -10,15 +10,22 @@ We used the public Perturb-seqs mRNA profiling dataset of single cells treated w
 
 ### How to run
 
-0. [Download profiles](./0_download_perturbseq.ipynb) and other supplementary data.
-1. Create a new conda environment for data preprocessing using R:
+First, create aa additional new conda environment for data preprocessing using R:
 
 ```
 conda env create -f perturbseq_processing_environment.yml
 ```
 
-Run [preprocessing notebook](./1_process_perturbseq.ipynb).
+To download data and execute all analyses, run:
 
-2. [Finalize preprocessing](./2_finalize_perturbseq.ipynb) and create psude-bulk profiles.
-3. [Calculate mAP](./3_calculate_map_perturbseq.ipynb) for phenotypic activity assesement using both single-cell and pseudo-bulk profiles.
-4. [Plot results](./4_plot_mAP_activity.ipynb).
+```bash
+bash run_all_perturbseq.sh
+```
+
+Or run individual steps:
+
+0. Download data: [`bash 0_download_data.sh`](./0_download_data.sh)
+1. Preprocess perturb-seq data using R: [`conda run -n perturbseq-processing Rscript 1_process_perturbseq.r`](./1_process_perturbseq.r)
+2. Finalize preprocessing in Python: [`python 2_finalize_perturbseq.py`](./2_finalize_perturbseq.py)
+3. Calculate mAP [`python 3_calculate_map_perturbseq.py`](./3_calculate_map_perturbseq.py)
+4. Plot mAP results: [`python 4_plot_map_perturbseq.py`](./4_plot_map_perturbseq.py)

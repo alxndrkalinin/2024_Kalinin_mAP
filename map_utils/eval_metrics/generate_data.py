@@ -29,9 +29,9 @@ def generate_perturbation_features(
     features = []
 
     if features_differ:
-        assert (
-            differ_params
-        ), "Must provide differ_params if features_differ is not None"
+        assert differ_params, (
+            "Must provide differ_params if features_differ is not None"
+        )
 
         for dist, num_diff in features_differ.items():
             features.append(

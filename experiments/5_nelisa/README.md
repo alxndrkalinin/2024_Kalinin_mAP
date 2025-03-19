@@ -13,6 +13,14 @@ Citation:
 
 nELISA and Cell Painting profiles are provided within `inputs` directory.
 
-0. [Preprocess profiles](./0_preprocess_profiles.ipynb) by performing robust normalization and feature selection.
-1. [Calculate mAP](./1_calculate_map.ipynb) to assess phenotypic activity and consistency.
-2. [Plot results](./2_plot_map.ipynb).
+To execute all analyses, run:
+
+```bash
+bash run_all_nelisa.sh
+```
+
+Or run individual steps:
+
+0. Preprocess profiles: [`python 0_preprocess_profiles.py`](./0_preprocess_profiles.py) by performing robust normalization and feature selection.
+1. Calculate mAP: [`python 1_calculatemap.py`](./1_calculate_map.py) to assess phenotypic activity and consistency.
+2. Plot results: [`python 2_plot_map.py`](./2_plot_map.py).

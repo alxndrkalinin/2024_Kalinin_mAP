@@ -1,6 +1,7 @@
-from copairs import map as copairs
 import numpy as np
 import pandas as pd
+
+from copairs import map as copairs
 
 
 def merge_labels(drugs_path, samples_path, labels_path, mapper_path):
@@ -134,6 +135,7 @@ def ap_biological(profiles_path, ap_path):
 def mean_average_precision(ap_path, map_path, sameby, pvalue_threshold):
     ap_scores = pd.read_csv(ap_path)
     agg_result = copairs.mean_average_precision(
-        ap_scores, sameby, null_size=10000, threshold=pvalue_threshold, seed=0
+        ap_scores, sameby, null_size=50000, threshold=pvalue_threshold, seed=0
     )
     agg_result.to_csv(map_path, index=False)
+    return agg_result

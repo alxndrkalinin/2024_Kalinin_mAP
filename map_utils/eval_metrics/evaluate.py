@@ -4,21 +4,20 @@ Loosely based on now-deprecated cytominer-eval package:
 https://github.com/cytomining/cytominer-eval.
 """
 
-from itertools import chain
-from functools import partial
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Union, Optional, Tuple
+from functools import partial
+from itertools import chain
+from typing import List, Optional, Tuple, Union
 
-import pandas as pd
 import networkx as nx
-from tqdm.auto import tqdm
 import numpy.typing as npt
+import pandas as pd
+from tqdm.auto import tqdm
 
+from copairs.map.filter import evaluate_and_filter, extract_filters, flatten_str_list
 from copairs.matching import Matcher, MatcherMultilabel, dict_to_dframe
-from copairs.map.filter import flatten_str_list, extract_filters, evaluate_and_filter
-
-from map_utils.eval_metrics import mp_value, mean_ap, kmeans, mmd
+from map_utils.eval_metrics import kmeans, mean_ap, mmd, mp_value
 
 
 def calculate_accuracy(metrics_results: dict) -> dict:
@@ -201,9 +200,9 @@ def group_profiles(
     pos_graph = nx.Graph()
     pos_graph.add_edges_from(pos_pairs[["ix1", "ix2"]].values.tolist())
     pos_cliques = list(nx.find_cliques(pos_graph))
-    assert (
-        len(set.intersection(*map(set, pos_cliques))) == 0
-    ), "Error! Overlapping positive cliques found."
+    assert len(set.intersection(*map(set, pos_cliques))) == 0, (
+        "Error! Overlapping positive cliques found."
+    )
 
     neg_graph = nx.Graph()
     neg_graph.add_edges_from(neg_pairs[["ix1", "ix2"]].values.tolist())

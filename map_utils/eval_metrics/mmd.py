@@ -2,7 +2,7 @@ from typing import Optional
 
 import numpy as np
 import numpy.typing as npt
-from scipy.spatial.distance import squareform, pdist, cdist
+from scipy.spatial.distance import cdist, pdist, squareform
 
 
 def mmd(
