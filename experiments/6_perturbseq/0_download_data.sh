@@ -40,7 +40,7 @@ OTHER_FILES=(
 echo "Downloading 'other' files..."
 for file in "${OTHER_FILES[@]}"; do
   output_path="${OUTPUT_DIR}/${file}"
-  
+
   if [[ ! -f "${output_path}" ]]; then
     echo "Downloading ${file}..."
     wget -q -nc -P "$OUTPUT_DIR" "${BASE_URL}/${file}"
