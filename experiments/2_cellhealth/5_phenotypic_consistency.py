@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-# Assesement of gene phenotypic consistency (Figs 3E & 3F)
+# Assessment of gene phenotypic consistency (Figs 3E & 3F)
 #
 # Calculate mAP to assess phenotypic consistency of each gene (retrieval its guides against other genes' guides).
 

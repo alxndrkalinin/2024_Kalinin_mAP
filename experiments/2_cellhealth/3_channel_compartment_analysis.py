@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-# Assesement of feature contributions per staining channel, cell compartment, and feature type (Fig 3D)
+# Assessment of feature contributions per staining channel, cell compartment, and feature type (Fig 3D)
 #
 # Calculate mAP to assess phenotypic activity of each perturbation
 #  (retrieval its replicates against negative controls) for different subsets of features.

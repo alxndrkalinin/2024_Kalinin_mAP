@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-# 1. Plot mAP vs aternative metrics calculated from simulated data (Figures 2, S2-5)
+# 1. Plot mAP vs alternative metrics calculated from simulated data (Figures 2, S2-5)
 #
 #
 # We generated perturbation and control profiles such that each perturbation had 2 to 4 replicates,
