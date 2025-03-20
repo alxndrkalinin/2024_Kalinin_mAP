@@ -15,10 +15,10 @@ References
 from typing import Union
 
 import numpy as np
-import pandas as pd
 import numpy.typing as npt
-from sklearn.decomposition import PCA
+import pandas as pd
 from sklearn.covariance import EmpiricalCovariance
+from sklearn.decomposition import PCA
 
 
 class MahalanobisEstimator:

@@ -1,6 +1,6 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-import matplotlib.pyplot as plt
 
 
 def get_umap_palette(n=3):

@@ -43,11 +43,16 @@ def stouffer_method(p_values):
     return combined_p_value
 
 
-def get_6well_plate_pairs(profiles, cell_line, control="cutting_control"):
+def subset_6_replicates(profiles, cell_line=None, control="cutting_control"):
     control_barcodes = get_control_barcodes(profiles)
-    cell_line_df = profiles.query("Metadata_cell_line == @cell_line")
+    if cell_line is not None:
+        cell_line_df = profiles.query("Metadata_cell_line == @cell_line")
+        n_replicates = 6
+    else:
+        cell_line_df = profiles
+        n_replicates = 6 * profiles["Metadata_cell_line"].nunique()
     perts_6_wells = cell_line_df.groupby("Metadata_pert_name")["Metadata_Well"].count()
-    perts_6_wells = perts_6_wells[perts_6_wells == 6].index.tolist()
+    perts_6_wells = perts_6_wells[perts_6_wells == n_replicates].index.tolist()
     df_6wells = cell_line_df[
         cell_line_df.Metadata_pert_name.isin(perts_6_wells)
         | cell_line_df.Metadata_pert_name.isin(control_barcodes[control])
@@ -57,6 +62,9 @@ def get_6well_plate_pairs(profiles, cell_line, control="cutting_control"):
         df_6wells.Metadata_pert_name.isin(control_barcodes[control]),
         df_6wells.index,
         -1,
+    )
+    df_6wells["Metadata_is_control"] = np.where(
+        df_6wells.Metadata_pert_name.isin(control_barcodes[control]), 1, 0
     )
     return df_6wells
 

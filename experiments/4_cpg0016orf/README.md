@@ -10,12 +10,15 @@ We used the [JUMP Consortium’s](https://broad.io/jump) “cpg0016-jump[orf]”
 
 ### How to run
 
-0. [Run snakemake pipeline](./Snakefile) that downloads profiles, preprocesses them, and calculates mAP for both phenotypic activity and consistency assesement:
+To download data and execute all analyses, run:
 
 ```bash
-snakemake -c1
+bash run_all_cpg0016orf.sh
 ```
-where `1` is the number of cores to use.
 
-1. [Plot phenotypic activity](./1_phenotypic_activity.ipynb)
-2. [Plot phenotypic consistency](./2_phenotypic_consistency.ipynb)
+Or run individual steps:
+
+0. Download data: [`bash 0_download_data.sh`](./0_download_data.sh)
+1. Calculate phenotypic activity: [`python 1_phenotypic_activity_orf.py`](./1_phenotypic_activity_orf.py)
+2. Calculate phenotypic consistency: [`python 2_phenotypic_consistency_corum_complex.py`](./2_phenotypic_consistency_corum_complex.py)
+3. Plot mAP results: [`python 3_plot_map_results.py`](./3_plot_map_results.py)

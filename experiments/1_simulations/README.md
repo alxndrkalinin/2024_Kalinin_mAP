@@ -6,8 +6,8 @@ The code generated perturbation and control profiles such that each perturbation
 
 ### How to run
 
-0. Specify parameters in [`config.yaml`](./config.yaml) and run `python 0_run_simulations.py`.
-1. Open [1_plot_simulations_results.ipynb](./1_plot_simulations_results.ipynb) to plot results.
+0. Specify parameters in [`config.yaml`](./config.yaml) and run [`python 0_run_simulations.py`](./0_run_simulations.py).
+1. Run [`python 1_plot_simulations_results.py`](./1_plot_simulations_results.py) to plot results.
 
 ### Figures S2-5
 

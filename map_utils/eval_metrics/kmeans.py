@@ -1,6 +1,5 @@
 import numpy as np
 import numpy.typing as npt
-
 from sklearn.cluster import KMeans
 from sklearn.metrics import accuracy_score
 

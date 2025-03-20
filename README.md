@@ -6,7 +6,7 @@ paper: "[A versatile information retrieval framework for evaluating profile stre
 ## Getting started
 
 ### System requirements
-This repository supports Python 3.9+ and should work with all modern operating systems (tested with MacOS 13.5, Ubuntu 18.04).
+This repository supports Python 3.11 and should work with all modern operating systems (tested with MacOS 14.5, Ubuntu 18.04).
 
 ### Dependencies
 This code depends on widely used Python packages:
@@ -19,7 +19,7 @@ This code depends on widely used Python packages:
 * umap-learn
 * scikit-learn
 
-It also uses [pycytominer](https://github.com/alxndrkalinin/pycytominer/tree/fix-ops-custom-features) for profiling data preprocessing and [copairs](https://github.com/cytomining/copairs/tree/v0.4.3) for profile grouping and mAP calculations.
+It also uses [pycytominer](https://github.com/alxndrkalinin/pycytominer/tree/fix-ops-custom-features) for profiling data preprocessing and [copairs](https://github.com/cytomining/copairs/tree/v0.5.1) for profile grouping and mAP calculations.
 
 
 ### Installation
@@ -29,7 +29,7 @@ environment management. The following commands create the environment from
 scratch and install the required packages.
 
 ```bash
-conda create -n map_eval "python>=3.9"
+conda create -n map_eval "python==3.11"
 conda activate map_eval
 pip install .
 ```
@@ -57,17 +57,22 @@ Each experiment directory  includes brief description of the dataset and scripts
 6. [Perturb-seq data](./experiments/6_perturbseq/) (Figures 4C-D, S5A-B, S8)
 7. [Mitocheck data](./experiments/7_mitocheck/) (Figure 5C-D, S9-10)
 
+To reproduce results on all real-world datasets (2-7), run
+
+```bash
+bash run_all_data.sh
+```
+
 ## Citation
 
 ```bibtex
-@article {Kalinin2024.04.01.587631,
-        author = {Kalinin, Alexandr A. and Arevalo, John and Vulliard, Loan and Serrano, Erik and Tsang, Hillary and Bornholdt, Michael and Rajwa, Bartek and Carpenter, Anne E. and Way, Gregory P. and Singh, Shantanu},
+@article {kalinin2024versatile,
+        author = {Kalinin, Alexandr A. and Arevalo, John and Vulliard, Loan and Serrano, Erik and Tsang, Hillary and Bornholdt, Michael and Muñoz, Alán F. and Sivagurunathan, Suganya and Rajwa, Bartek and Carpenter, Anne E. and Way, Gregory P. and Singh, Shantanu},
         title = {A versatile information retrieval framework for evaluating profile strength and similarity},
-        elocation-id = {2024.04.01.587631},
-        year = {2024},
+        year = {2025},
         doi = {10.1101/2024.04.01.587631},
         publisher = {Cold Spring Harbor Laboratory},
-        URL = {https://www.biorxiv.org/content/early/2024/04/02/2024.04.01.587631},
+        URL = {https://doi.org/10.1101/2024.04.01.587631},
         journal = {bioRxiv}
 }
 ```

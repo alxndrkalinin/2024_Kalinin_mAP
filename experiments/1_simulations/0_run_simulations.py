@@ -1,10 +1,10 @@
 import hydra
 import pandas as pd
-from omegaconf import OmegaConf, DictConfig
+from omegaconf import DictConfig, OmegaConf
 
-from map_utils.map import assign_reference_index
+from map_utils.eval_metrics.evaluate import calculate_accuracy, evaluate_metrics
 from map_utils.eval_metrics.generate_data import generate_features
-from map_utils.eval_metrics.evaluate import evaluate_metrics, calculate_accuracy
+from map_utils.map import assign_reference_index
 
 
 def get_perturb_feature_range(

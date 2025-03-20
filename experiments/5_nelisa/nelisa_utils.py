@@ -1,6 +1,6 @@
 from functools import partial
 
-from pycytominer import normalize, feature_select
+from pycytominer import feature_select, normalize
 
 
 def get_meta_features(df):

@@ -4,7 +4,7 @@ Based on the implementation in copairs:
 https://github.com/cytomining/copairs/blob/main/src/copairs/map/map.py
 """
 
-from itertools import product, combinations
+from itertools import combinations, product
 
 import numpy as np
 import numpy.typing as npt

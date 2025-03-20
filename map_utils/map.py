@@ -1,26 +1,23 @@
 import numpy as np
+from statsmodels.stats.multitest import multipletests
 
-from copairs import map
+from copairs import map, matching
+from copairs.map.average_precision import p_values
 
 
-def assign_reference_index(
-    df, condition, reference_col="Metadata_Reference_Index", default_value=-1
+def calculate_map(
+    df, pair_config, map_config, reference_index_config=None, return_ap_scores=False
 ):
-    """Assign reference index to a column based on a condition."""
-    df[reference_col] = default_value
-    df.loc[condition, reference_col] = df.loc[condition].index
-    return df
-
-
-def calculate_map(df, pair_config, map_config):
     """Calculate mean average precision (mAP) for a given DataFrame."""
+    if reference_index_config is not None:
+        df = matching.assign_reference_index(df, **reference_index_config)
     metadata = df.filter(regex="Metadata_")
     features = df.filter(regex="^(?!Metadata)").values
 
-    pos_sameby = pair_config.get("pos_sameby", {"all": [], "any": []})
-    pos_diffby = pair_config.get("pos_diffby", {"all": [], "any": []})
-    neg_sameby = pair_config.get("neg_sameby", {"all": [], "any": []})
-    neg_diffby = pair_config.get("neg_diffby", {"all": [], "any": []})
+    pos_sameby = pair_config.get("pos_sameby", [])
+    pos_diffby = pair_config.get("pos_diffby", [])
+    neg_sameby = pair_config.get("neg_sameby", [])
+    neg_diffby = pair_config.get("neg_diffby", [])
     multilabel_col = pair_config.get("multilabel_col", None)
 
     if multilabel_col is not None:
@@ -40,6 +37,7 @@ def calculate_map(df, pair_config, map_config):
     ap_scores.dropna(subset=["average_precision"], inplace=True)
 
     null_size = map_config.get("null_size", 10000)
+    max_workers = map_config.get("max_workers", 32)
     p_value_threshold = map_config.get("threshold", 0.05)
     random_seed = map_config.get("random_seed", 0)
     groupby_columns = map_config.get("groupby_columns", pos_sameby)
@@ -49,6 +47,7 @@ def calculate_map(df, pair_config, map_config):
         null_size=null_size,
         threshold=p_value_threshold,
         seed=random_seed,
+        max_workers=max_workers,
     )
 
     map_scores["-log10(mAP p-value)"] = -np.log10(
@@ -58,4 +57,15 @@ def calculate_map(df, pair_config, map_config):
         columns={"mean_average_precision": "mAP", "below_corrected_p": "p < 0.05"},
         inplace=True,
     )
-    return map_scores
+
+    if return_ap_scores:
+        ap_p_values = p_values(ap_scores, null_size=null_size, seed=random_seed)
+        _, ap_p_values, _, _ = multipletests(ap_p_values, method="fdr_bh")
+        ap_scores["p_value"] = ap_p_values
+        ap_scores["p < 0.05"] = ap_p_values < p_value_threshold
+        ap_scores["-log10(AP p-value)"] = -np.log10(
+            ap_p_values.clip(min=np.finfo(float).eps)
+        )
+        return map_scores, ap_scores
+    else:
+        return map_scores
