@@ -22,5 +22,5 @@ bash run_all_nelisa.sh
 Or run individual steps:
 
 0. Preprocess profiles: [`python 0_preprocess_profiles.py`](./0_preprocess_profiles.py) by performing robust normalization and feature selection.
-1. Calculate mAP: [`python 1_calculatemap.py`](./1_calculate_map.py) to assess phenotypic activity and consistency.
+1. Calculate mAP: [`python 1_calculate_map.py`](./1_calculate_map.py) to assess phenotypic activity and consistency.
 2. Plot results: [`python 2_plot_map.py`](./2_plot_map.py).

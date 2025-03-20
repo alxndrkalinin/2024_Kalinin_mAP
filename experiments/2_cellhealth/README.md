@@ -22,5 +22,5 @@ Or run individual steps:
 1. Preprocess profiles: [`python 1_preprocess_data.py`](./1_preprocess_data.py)
 2. Calculate plate and well position effects on phenotypic activity: [`python 2_plate_well_position_effect.py`](./2_plate_well_position_effect.py)
 3. Calculate phenotypic activity per channel and compartment: [`python 3_channel_compartment_analysis.py`](./3_channel_compartment_analysis.py)
-4. Calculate phenotypic activity for both types of controls: [`4_phenotypic_activity.py`](./4_phenotypic_activity.py)
-5. Calculate phenotypic consistency: [`5_phenotypic_consistency.py`](./5_phenotypic_consistency.py)
+4. Calculate phenotypic activity for both types of controls: [`python 4_phenotypic_activity.py`](./4_phenotypic_activity.py)
+5. Calculate phenotypic consistency: [`python 5_phenotypic_consistency.py`](./5_phenotypic_consistency.py)
