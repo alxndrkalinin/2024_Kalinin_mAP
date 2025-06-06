@@ -21,7 +21,16 @@ def color_category(row):
         return "None"
 
 
-def plot_gene_vs_ms(aps, title=None):
+def plot_gene_vs_ms(
+    aps,
+    title=None,
+    width=3,
+    height=3,
+    point_size=10,
+    point_alpha=0.75,
+    title_font_size=16,
+    legend_markersize=5,
+):
     aps["p < 0.05"] = aps.apply(color_category, axis=1)
     aps = aps.sort_values(
         by="p < 0.05",
@@ -43,8 +52,8 @@ def plot_gene_vs_ms(aps, title=None):
         y="AP, Morphological Class (MC)",
         hue="p < 0.05",
         palette=color_map,
-        s=10,
-        alpha=0.75,
+        s=point_size,
+        alpha=point_alpha,
         marginal_kws={"cut": 0, "fill": False},
     )
 
@@ -56,7 +65,7 @@ def plot_gene_vs_ms(aps, title=None):
     handles = np.asarray(handles)[label_order].tolist()
 
     for handle in handles:
-        handle.set_markersize(5)
+        handle.set_markersize(legend_markersize)
 
     g.ax_joint.get_legend().remove()
     g.ax_joint.legend(
@@ -76,7 +85,7 @@ def plot_gene_vs_ms(aps, title=None):
         transform=g.ax_joint.transAxes,
         ha="left",
         va="top",
-    )  # Top left
+    )
     g.ax_joint.text(
         0.98,
         0.005,
@@ -87,22 +96,35 @@ def plot_gene_vs_ms(aps, title=None):
     )
 
     if title is not None:
-        plt.suptitle(title, fontsize=16)
+        plt.suptitle(title, fontsize=title_font_size)
     plt.show()
 
+    fig = plt.gcf()
+    fig.set_size_inches(width, height)
+    return fig
 
-def plot_mc_cp_vs_dp(aps, hue=None, legend=True):
+
+def plot_mc_cp_vs_dp(
+    aps,
+    hue=None,
+    legend=True,
+    width=3,
+    height=3,
+    point_size=20,
+    point_alpha=0.75,
+    legend_markersize=5,
+):
     mean_aps = aps[["AP, CellProfiler features", "AP, DeepProfiler features"]].mean()
     retrieved = aps[["CellProfiler retrieved", "DeepProfiler retrieved"]].mean()
 
-    fig, ax = plt.subplots(figsize=(6, 6))
+    fig, ax = plt.subplots(figsize=(width, height))
     g = sns.scatterplot(
         aps,
         x="AP, CellProfiler features",
         y="AP, DeepProfiler features",
         hue=hue,
-        s=20,
-        alpha=0.75,
+        s=point_size,
+        alpha=point_alpha,
         ax=ax,
     )
 
@@ -119,19 +141,28 @@ def plot_mc_cp_vs_dp(aps, hue=None, legend=True):
 
     ax.plot([0, 1], [0, 1], color="grey", linestyle="--")
 
+    handles, labels = g.get_legend_handles_labels()
+    label_order = np.argsort(labels)
+    labels = np.asarray(labels)[label_order].tolist()
+    handles = np.asarray(handles)[label_order].tolist()
+
+    for handle in handles:
+        handle.set_markersize(legend_markersize)
+
     ax.text(
-        0.05,
-        0.95,
-        f"mAP: {mean_aps['AP, DeepProfiler features']:.2f}\nRetrieved: {retrieved['DeepProfiler retrieved']:.0%}",
+        0.01,
+        0.99,
+        f"mAP: {mean_aps['AP, DeepProfiler features']:.2f}, Retrieved: {retrieved['DeepProfiler retrieved']:.0%}",
         transform=ax.transAxes,
         ha="left",
         va="top",
-    )  # Top left
+    )
     ax.text(
-        0.98,
-        0.005,
+        0.99,
+        0.00,
         f"mAP: {mean_aps['AP, CellProfiler features']:.2f}, Retrieved: {retrieved['CellProfiler retrieved']:.0%}",
         transform=ax.transAxes,
         ha="right",
         va="bottom",
     )
+    return fig

@@ -14,29 +14,12 @@ import pandas as pd
 import plotnine as gg
 
 from map_utils.map import calculate_map
-from map_utils.plot import plot_map_scatter, set_plotting_style
-from cell_health_utils import subset_6_replicates, get_cell_line_colors
-
-
-def save_plot(plot_obj, base_name, output_dir, dpi=500, width=8, height=4):
-    svg_path = output_dir / f"{base_name}.svg"
-    png_path = output_dir / f"{base_name}.png"
-    # If the plot object has a 'save' method (e.g., plotnine), use it.
-    if hasattr(plot_obj, "save"):
-        plot_obj.save(
-            str(svg_path), dpi=dpi, height=height, width=width, bbox_inches="tight"
-        )
-        plot_obj.save(
-            str(png_path), dpi=dpi, height=height, width=width, bbox_inches="tight"
-        )
-    # Otherwise, assume it's a matplotlib figure.
-    elif hasattr(plot_obj, "savefig"):
-        plot_obj.savefig(str(svg_path), dpi=dpi, bbox_inches="tight")
-        plot_obj.savefig(str(png_path), dpi=dpi, bbox_inches="tight")
-    else:
-        raise TypeError(
-            "The provided plot object does not have a save or savefig method."
-        )
+from map_utils.plot import plot_map_scatter_kde, set_plotting_style, save_plot
+from cell_health_utils import (
+    subset_6_replicates,
+    get_cell_line_colors,
+    plot_ap_per_label,
+)
 
 
 def process_phenotypic_activity(profiles, cell_lines, results_dir):
@@ -73,19 +56,22 @@ def process_phenotypic_activity(profiles, cell_lines, results_dir):
 
 def plot_map_figure(map_res, cell_line_colors, fig_dir):
     map_res["const"] = 1
-    fig_map = plot_map_scatter(
+    fig_map = plot_map_scatter_kde(
         map_res,
         "const",
         "",
         hue_col="Cell type",
         palette=cell_line_colors,
         row=None,
-        move_legend="center left",
-        pr_x=0.53,
-        pr_y=0.3,
+        legend_loc="center left",
+        pr_x=0.5,
+        pr_y=0.09,
         l_x=1.15,
         l_y=0.8,
+        size_rescale=0.31,
+        point_size=5,
         figure="Fig3B",
+        legend=False,
         save_path=str(fig_dir),
     )
     return fig_map
@@ -93,7 +79,9 @@ def plot_map_figure(map_res, cell_line_colors, fig_dir):
 
 def plot_individual_guides(map_res, cell_line_colors, fig_dir):
     guide_counts = map_res[map_res["p < 0.05"]].Metadata_pert_name.value_counts()
-    guides = sorted(guide_counts[guide_counts > 1].index)[:18]
+    # guides = sorted(guide_counts[guide_counts > 1].index)[:18]
+    guides = sorted(guide_counts[guide_counts > 1].index)
+    guides = guides[:14] + [guides[18]]
     guide_res = map_res.query("Metadata_pert_name in @guides")
     gene_gg = (
         gg.ggplot(
@@ -122,31 +110,18 @@ def plot_individual_guides(map_res, cell_line_colors, fig_dir):
     return guides
 
 
-def plot_guide_ap(ap_res, cell_line_colors, guides, fig_dir):
+def plot_guide_ap(ap_res, cell_line_colors, guides, fig_dir, width=8, height=4):
     ap_res.rename(columns={"average_precision": "AP"}, inplace=True)
     guide_ap = ap_res.query("Metadata_pert_name in @guides")
-    gene_gg_ap = (
-        gg.ggplot(guide_ap, gg.aes(x="AP", y="-log10(AP p-value)", color="Cell type"))
-        + gg.geom_jitter(data=guide_ap[~guide_ap["p < 0.05"]], shape="s", size=1.2)
-        + gg.geom_jitter(data=guide_ap[guide_ap["p < 0.05"]], shape="o", size=1.2)
-        + gg.geom_hline(yintercept=-np.log10(0.05), linetype="dashed", color="grey")
-        + gg.theme_bw()
-        + gg.xlab("AP")
-        + gg.ylab("-log10(AP p-value)")
-        + gg.facet_wrap("~Metadata_pert_name", ncol=6)
-        + gg.scale_color_manual(values=cell_line_colors)
-        + gg.scale_x_continuous(breaks=[0, 0.5, 1], labels=["0", "0.5", "1"])
-        + gg.theme(
-            strip_background=gg.element_rect(colour="black", fill="#fdfff4"),
-            axis_text=gg.element_text(size=10),
-            text=gg.element_text(family="Open Sans", size=14),
-            axis_title=gg.element_text(family="Open Sans", size=14),
-            legend_title=gg.element_text(margin={"b": 20}),
-            strip_text=gg.element_text(size=10, family="Open Sans"),
-            figure_size=(8, 4),
-        )
+    guide_gg = plot_ap_per_label(
+        guide_ap,
+        "Metadata_pert_name",
+        cell_line_colors,
+        width=width,
+        height=height,
+        ncol=5,
     )
-    save_plot(gene_gg_ap, "Fig3C_AP", fig_dir, dpi=500, width=8, height=4)
+    save_plot(guide_gg, "Fig3C_AP", fig_dir, dpi=500, width=width, height=height)
 
 
 def compare_controls(profiles, map_res, cell_lines, fig_dir, results_dir):
@@ -291,7 +266,7 @@ def plot_phenotypic_vs_ceres(profiles, guide_res_file, cell_lines, fig_dir):
 
 
 def main():
-    set_plotting_style()
+    set_plotting_style(font_size=5, linewidth=0.35)
     cell_line_colors = get_cell_line_colors()
 
     profiles_file = Path(
@@ -311,7 +286,7 @@ def main():
     save_plot(fig_map, "Fig3B", fig_dir, dpi=500, width=8, height=4)
 
     guides = plot_individual_guides(map_res, cell_line_colors, fig_dir)
-    plot_guide_ap(ap_res, cell_line_colors, guides, fig_dir)
+    plot_guide_ap(ap_res, cell_line_colors, guides, fig_dir, width=1.86, height=1.24)
 
     compare_controls(profiles, map_res, cell_lines, fig_dir, results_dir)
 

@@ -1,12 +1,46 @@
-from functools import partial
 from pathlib import Path
+from functools import partial
+from pkg_resources import resource_filename
 
-import matplotlib.pyplot as plt
 import numpy as np
+import plotnine as gg
 import seaborn as sns
+import matplotlib.pyplot as plt
 from matplotlib import font_manager
 from matplotlib.ticker import FuncFormatter, MultipleLocator
-from pkg_resources import resource_filename
+
+
+def save_plot(
+    plot_obj,
+    base_name,
+    output_dir,
+    dpi=500,
+    width=8,
+    height=4,
+    bbox_inches="tight",
+    formats="svg,png,pdf",
+):
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for format in formats.split(","):
+        if format not in ["svg", "png", "pdf"]:
+            raise ValueError(
+                f"Unsupported format: {format}. Supported formats are: svg, png, pdf."
+            )
+
+        save_path = output_dir / f"{base_name}.{format}"
+        # If the plot object has a 'save' method (e.g., plotnine), use it.
+        if hasattr(plot_obj, "save"):
+            plot_obj.save(
+                save_path, dpi=dpi, height=height, width=width, bbox_inches=bbox_inches
+            )
+        # Otherwise, assume it's a matplotlib figure.
+        elif hasattr(plot_obj, "savefig"):
+            plot_obj.savefig(save_path, dpi=dpi, bbox_inches=bbox_inches)
+        else:
+            raise TypeError(
+                "The provided plot object does not have a save or savefig method."
+            )
+        print(f"Saved plot as: {save_path}")
 
 
 def x_axis_formatter(x, pos, n_labels=5):
@@ -25,7 +59,15 @@ def remove_inner_ticklabels(fig: plt.Figure):
 
 
 def add_corner_text_annotations(
-    ax, data, top="exclusive", bottom="dropped", prefix="", h_offset=0.05, v_offset=0.05
+    ax,
+    data,
+    top="exclusive",
+    bottom="dropped",
+    prefix="",
+    h_offset=0.05,
+    v_offset=0.05,
+    h_offset_bottom=None,
+    v_offset_bottom=None,
 ):
     threshold = -np.log10(0.05)
     dropped_percent = (data[bottom] > threshold).mean()
@@ -38,9 +80,11 @@ def add_corner_text_annotations(
         ha="left",
         va="top",
     )
+    h_offset_bottom = h_offset_bottom if h_offset_bottom is not None else 2 * h_offset
+    v_offset_bottom = v_offset_bottom if v_offset_bottom is not None else v_offset
     ax.text(
-        1 - 2 * h_offset,
-        v_offset,
+        1 - h_offset_bottom,
+        v_offset_bottom,
         f"{prefix}{dropped_percent:.0%}",
         transform=ax.transAxes,
         ha="right",
@@ -48,37 +92,52 @@ def add_corner_text_annotations(
     )
 
 
-def set_plotting_style():
+def set_plotting_style(font_size=16, linewidth=1):
     font_path = resource_filename(__name__, "fonts/OpenSans-Regular.ttf")
     font_manager.fontManager.addfont(font_path)
     _ = font_manager.FontProperties(fname=font_path)
     plt.rcParams["font.family"] = ["Open Sans"]
-    plt.rcParams["font.size"] = 16
+    plt.rcParams["font.size"] = font_size
+    plt.rcParams["lines.linewidth"] = linewidth
+    plt.rcParams.update(
+        {
+            "axes.linewidth": linewidth,
+            "xtick.major.width": linewidth,
+            "ytick.major.width": linewidth,
+            "xtick.minor.width": linewidth,
+            "ytick.minor.width": linewidth,
+            "xtick.major.size": 5 * linewidth,
+            "ytick.major.size": 5 * linewidth,
+            "xtick.minor.size": 2.5 * linewidth,
+            "ytick.minor.size": 2.5 * linewidth,
+        }
+    )
 
 
 def format_fig3a(ax_scatter, pr_x, pr_y, frs, palette, fr_total):
     """Apply Fig3A specific formatting to the mAP scatter plot."""
     ax_scatter.text(pr_x - 0.33, pr_y, "Retrieved: ", transform=ax_scatter.transAxes)
     ax_scatter.text(
-        0.82,
-        0.12,
+        0.73,
+        0.11,
         "p=0.05",
         transform=ax_scatter.transAxes,
         color="grey",
-        fontsize=12,
+        # fontsize=12,
+        fontsize=5,
         fontstyle="italic",
     )
     for i, (hue_value, fr) in enumerate(frs.items()):
         ax_scatter.text(
-            pr_x + i * 0.15,
-            pr_y,
+            (pr_x - 0.33) + i * 0.175,
+            pr_y - 0.09,
             f"{fr:.0%}",
             transform=ax_scatter.transAxes,
             color=palette[hue_value],
         )
     ax_scatter.text(
-        pr_x + len(frs) * 0.15,
-        pr_y,
+        (pr_x - 0.33) + len(frs) * 0.175,
+        pr_y - 0.09,
         f"({fr_total:.0%})",
         transform=ax_scatter.transAxes,
     )
@@ -88,25 +147,26 @@ def format_fig3b(ax_scatter, pr_x, pr_y, frs, palette, fr_total):
     """Apply Fig3B specific formatting to the mAP scatter plot."""
     ax_scatter.text(pr_x, pr_y + 0.07, "Retrieved:", transform=ax_scatter.transAxes)
     ax_scatter.text(
-        0.01,
-        pr_y - 0.03,
+        0.68,
+        0.3,
         "p=0.05",
         transform=ax_scatter.transAxes,
         color="grey",
-        fontsize=12,
+        # fontsize=12,
+        fontsize=5,
         fontstyle="italic",
     )
     for i, (hue_value, fr) in enumerate(frs.items()):
         ax_scatter.text(
-            (pr_x - 0.2) + i * 0.16,
-            pr_y - 0.03,
+            (pr_x - 0.33) + i * 0.175,
+            pr_y - 0.035,
             f"{fr:.0%}",
             transform=ax_scatter.transAxes,
             color=palette[hue_value],
         )
     ax_scatter.text(
-        (pr_x - 0.2) + len(frs) * 0.16,
-        pr_y - 0.03,
+        (pr_x - 0.33) + len(frs) * 0.175,
+        pr_y - 0.035,
         f"({fr_total:.0%})",
         transform=ax_scatter.transAxes,
     )
@@ -115,25 +175,25 @@ def format_fig3b(ax_scatter, pr_x, pr_y, frs, palette, fr_total):
 def format_fig3e(ax_scatter, pr_x, pr_y, frs, palette, fr_total):
     """Apply Fig3E specific formatting to the mAP scatter plot."""
     ax_scatter.text(pr_x, pr_y + 0.1, "Retrieved:", transform=ax_scatter.transAxes)
-    ax_scatter.text(
-        0.82,
-        pr_y - 0.45,
-        "p=0.05",
-        transform=ax_scatter.transAxes,
-        color="grey",
-        fontsize=12,
-        fontstyle="italic",
-    )
+    # ax_scatter.text(
+    #     0.82,
+    #     pr_y - 0.45,
+    #     "p=0.05",
+    #     transform=ax_scatter.transAxes,
+    #     color="grey",
+    #     fontsize=12,
+    #     fontstyle="italic",
+    # )
     for i, (hue_value, fr) in enumerate(frs.items()):
         ax_scatter.text(
-            pr_x + i * 0.16,
+            pr_x + i * 0.175,
             pr_y,
             f"{fr:.0%}",
             transform=ax_scatter.transAxes,
             color=palette[hue_value],
         )
     ax_scatter.text(
-        pr_x + len(frs) * 0.16,
+        pr_x + len(frs) * 0.175,
         pr_y,
         f"({fr_total:.0%})",
         transform=ax_scatter.transAxes,
@@ -154,7 +214,7 @@ def apply_figure_formatting(
         format_fig3e(ax_scatter, pr_x, pr_y, frs, palette, fr_total)
 
 
-def plot_map_scatter(
+def plot_map_scatter_kde(
     df,
     col,
     title,
@@ -162,7 +222,6 @@ def plot_map_scatter(
     row=None,
     hue_col=None,
     palette=None,
-    move_legend="lower right",
     y_label=None,
     aspect=None,
     adjust=None,
@@ -173,6 +232,11 @@ def plot_map_scatter(
     m_x=0.52,
     m_y=0.01,
     kde_y=0.4,
+    point_size=50,
+    size_rescale=None,
+    legend=True,
+    legend_frameon=False,
+    legend_loc="upper center",
     figure=None,
     save_path=None,
 ):
@@ -240,10 +304,11 @@ def plot_map_scatter(
         num_rows = len(unique_row_values)
 
     # Create figure and axes
+    panel_size = 4 if size_rescale is None else 4 * size_rescale
     fig, axes = plt.subplots(
         num_rows,
         num_cols,
-        figsize=(num_cols * 4, num_rows * 4),
+        figsize=(num_cols * panel_size, num_rows * panel_size),
         layout="constrained",
         sharex=True,
         sharey=True,
@@ -276,7 +341,7 @@ def plot_map_scatter(
                     hue=hue_col,
                     palette=palette,
                     markers={"p<0.05": "o", "p>=0.05": "s"},
-                    s=50,
+                    s=point_size,
                 )
                 # Add horizontal line for p=0.05
                 ax_scatter.axhline(-np.log10(0.05), color="grey", linestyle="--")
@@ -301,9 +366,10 @@ def plot_map_scatter(
                     x=metric,
                     y=f"-log10({metric} p-value)",
                     hue="p < 0.05",
-                    s=50,
+                    s=point_size,
                 )
-                ax_scatter.set_title(f"{col_value}", fontsize=16, pad=20)
+                # ax_scatter.set_title(f"{col_value}", fontsize=16, pad=20)
+                ax_scatter.set_title(f"{col_value}")
 
                 # Simple retrieved percentage for non-hue mode
                 if col_i == 1:
@@ -348,6 +414,7 @@ def plot_map_scatter(
                         x=metric,
                         label=str(hue_val),
                         cut=1,
+                        clip=(-0.05, 1.05),
                         color=palette[hue_val],
                     )
                     mmaps[hue_val] = sub_df[(sub_df[hue_col] == hue_val)][metric].mean()
@@ -389,14 +456,16 @@ def plot_map_scatter(
 
     # Handle layout and legend
     plt.tight_layout()
-    fig.legend(
-        handles,
-        labels,
-        title="" if use_hue_mode else "p < 0.05",
-        loc="upper center",
-        bbox_to_anchor=(l_x, l_y),
-        frameon=False,
-    )
+    if legend:
+        lgd = fig.legend(
+            handles,
+            labels,
+            title="" if use_hue_mode else "p < 0.05",
+            loc=legend_loc,
+            bbox_to_anchor=(l_x, l_y),
+            frameon=legend_frameon,
+        )
+        lgd.get_frame().set_linewidth(plt.rcParams["axes.linewidth"])
 
     if adjust is not None:
         fig.subplots_adjust(**adjust)
@@ -405,6 +474,152 @@ def plot_map_scatter(
     if save_path is not None and figure is not None:
         fig.savefig(Path(save_path) / f"{figure}.png", dpi=300)
         fig.savefig(Path(save_path) / f"{figure}.svg")
+        fig.savefig(Path(save_path) / f"{figure}.pdf")
 
     plt.show()
+    return fig
+
+
+def plot_map_activity_scatter(
+    df,
+    x: str = "relative_activity_day5",
+    y: str = "mAP",
+    aes_mapping: dict = None,  # e.g. {"fill": "Cell type"} or {"color": "p < 0.05"}
+    facet: str = None,
+    facet_ncol: int = None,
+    density_aes: dict = None,
+    density_size: dict = None,
+    add_linear_model: bool = False,
+    smooth_method: str = "lm",
+    smooth_color: str = "black",
+    smooth_size: float = 0.3,
+    point_shape="o",
+    point_size: float = 0.1,
+    point_alpha: float = 1.0,
+    point_stroke: float = 0.1,
+    horizontal_line: float = None,
+    x_label: str = None,
+    y_label: str = None,
+    x_range: tuple = None,
+    y_range: tuple = None,
+    x_scale: dict = None,  # e.g. {"breaks": [0, 0.5, 1], "labels": ["0", "0.5", "1"], "minor_breaks": []}
+    y_scale: dict = None,  # e.g. {"breaks": [0, 0.5, 1], "labels": ["0", "0.5", "1"], "minor_breaks": []}
+    scale_manual_values: dict = None,
+    guide_title: str = None,
+    width: float = 8,
+    height: float = 4,
+    tick_length: float = 1.0,
+    legend_position: str = "none",
+    theme_font_size: float = 5,
+    theme_font_family: str = "Open Sans",
+):
+    """
+    General global scatter plotting function that supports both bulk and singlecell styles and optional faceting.
+
+    Parameters:
+      df: DataFrame with the data.
+      x, y: Column names to plot.
+      aes_mapping: Dictionary of aesthetic mappings (e.g. {"fill": "Cell type"} or {"color": "p < 0.05"}).
+      facet: Column name for faceting; if None, no faceting is applied.
+      facet_ncol: Number of facet columns (if faceting).
+      bulk_point_size: Point size for bulk scatter layer.
+      smooth_method, smooth_color, smooth_size: Smoothing line parameters in bulk mode.
+      singlecell_density_point_size, singlecell_density_point_alpha: Point parameters for singlecell mode.
+      point_shape, point_alpha, point_stroke: Common point appearance settings.
+      horizontal_line: Draws a horizontal dashed line at this y-value if provided.
+      xlab_str, ylab_str: Axis labels.
+      x_range, y_range: Axis limits applied via coord_cartesian.
+      x_scale, y_scale: Additional scale settings (passed to scale_x_continuous/scale_y_continuous).
+      scale_manual_values: Manual scale mapping (applied via scale_fill_manual/scale_color_manual).
+      guide_title: Title for the guide (if mapping "color").
+      width, height: Figure dimensions in inches.
+      tick_length: Tick length on the matplotlib axes.
+      theme_font_size: Font size for all text.
+
+    Returns:
+      A matplotlib Figure.
+    """
+    if aes_mapping is None:
+        aes_mapping = {"fill": "p < 0.05"}
+
+    p = gg.ggplot(df, gg.aes(x=x, y=y, **aes_mapping))
+
+    p = p + gg.geom_point(
+        size=point_size,
+        shape=point_shape,
+        alpha=point_alpha,
+        color="white",
+        stroke=point_stroke,
+    )
+
+    if density_aes is not None:
+        p = p + gg.geom_density_2d(gg.aes(**density_aes), size=density_size)
+
+    if add_linear_model:
+        p = p + gg.geom_smooth(
+            gg.aes(group=1), method=smooth_method, size=smooth_size, color=smooth_color
+        )
+
+    if horizontal_line is not None:
+        p = p + gg.geom_hline(
+            yintercept=horizontal_line, linetype="dashed", color="grey", size=0.2
+        )
+
+    if facet is not None:
+        p = p + gg.facet_wrap(f"~{facet}", ncol=facet_ncol)
+
+    if x_label is not None:
+        p = p + gg.xlab(x_label)
+    if y_label is not None:
+        p = p + gg.ylab(y_label)
+
+    if x_range is not None or y_range is not None:
+        p = p + gg.coord_cartesian(xlim=x_range, ylim=y_range)
+
+    if x_scale is not None:
+        p = p + gg.scale_x_continuous(**x_scale)
+    if y_scale is not None:
+        p = p + gg.scale_y_continuous(**y_scale)
+
+    if scale_manual_values is not None:
+        p = p + gg.scale_fill_manual(values=scale_manual_values)
+        p = p + gg.scale_color_manual(values=scale_manual_values)
+
+    if guide_title is not None and "color" in aes_mapping:
+        p = p + gg.guides(color=gg.guide_colorbar(title=guide_title))
+
+    p = (
+        p
+        + gg.theme_bw()
+        + gg.theme(
+            plot_background=gg.element_rect(fill="white", colour=None),
+            panel_background=gg.element_rect(fill="white", colour=None),
+            panel_grid_major=gg.element_blank(),
+            panel_grid_minor=gg.element_blank(),
+            panel_border=gg.element_rect(colour="grey", fill=None, linewidth=0.2),
+            axis_line=gg.element_line(color="black", linewidth=0.2),
+            axis_text=gg.element_text(family=theme_font_family, size=theme_font_size),
+            axis_title=gg.element_text(family=theme_font_family, size=theme_font_size),
+            legend_text=gg.element_text(family=theme_font_family, size=theme_font_size),
+            legend_title=gg.element_text(
+                family=theme_font_family, size=theme_font_size
+            ),
+            strip_text=gg.element_text(
+                family=theme_font_family, size=theme_font_size, margin={"t": 0, "b": 0}
+            ),
+            strip_background=gg.element_rect(
+                colour="black", fill="#fdfff4", linewidth=0.2
+            ),
+            text=gg.element_text(family=theme_font_family, size=theme_font_size),
+            legend_position=legend_position,
+            axis_ticks=gg.element_line(linewidth=0.2),
+            figure_size=(width, height),
+        )
+    )
+
+    fig = p.draw()
+    fig.set_size_inches(width, height)
+    for ax in fig.axes:
+        ax.tick_params(length=tick_length)
+
     return fig

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from map_utils.plot import plot_map_scatter, set_plotting_style
+from map_utils.plot import plot_map_scatter_kde, set_plotting_style
 
 
 def save_figure(fig, filename_prefix: str, output_dir: Path) -> None:
@@ -39,7 +39,7 @@ def process_and_plot_map(
     print(f"Preview of {input_file}:")
     print(df.head(10))
     df["const"] = const_value
-    fig = plot_map_scatter(df, "const", "", pr_x=pr_x, pr_y=pr_y, l_x=l_x, l_y=l_y)
+    fig = plot_map_scatter_kde(df, "const", "", pr_x=pr_x, pr_y=pr_y, l_x=l_x, l_y=l_y)
     if fig is None:
         fig = plt.gcf()
     return fig
@@ -88,7 +88,7 @@ def main():
     unique_targets = df_bio.Metadata_target.nunique()
     print(f"Number of unique Metadata_target entries: {unique_targets}")
     df_bio["const"] = "dataset: cpg0004"
-    fig_bio = plot_map_scatter(
+    fig_bio = plot_map_scatter_kde(
         df_bio, "const", "", pr_x=0.45, pr_y=0.02, l_x=1.1, l_y=0.58
     )
     if fig_bio is None:

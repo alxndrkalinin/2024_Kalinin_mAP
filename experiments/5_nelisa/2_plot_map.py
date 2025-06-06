@@ -6,62 +6,41 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 from map_utils.plot import (
-    add_corner_text_annotations,
-    plot_map_scatter,
+    save_plot,
+    plot_map_scatter_kde,
     set_plotting_style,
+    add_corner_text_annotations,
 )
 
 
-def load_and_combine_activity_maps() -> pd.DataFrame:
+def load_and_combine_maps(cp_path: str, ne_path: str, label: str) -> pd.DataFrame:
     """
-    Load and combine phenotypic activity maps for Cell Painting and nELISA.
+    Load and combine Cell Painting and nELISA results.
+
+    Parameters:
+    - cp_path: Path to Cell Painting CSV file.
+    - ne_path: Path to nELISA CSV file.
+    - label: Descriptive label for printing (e.g., "activity", "consistency").
+
+    Returns:
+    - Combined DataFrame with assay labels and standardized columns.
     """
-    cp_act = pd.read_csv("outputs/cp_map_activity_results.csv")
-    ne_act = pd.read_csv("outputs/ne_map_activity_results.csv")
-    print(
-        "Cell Painting activity shape:",
-        cp_act.shape,
-        "nELISA activity shape:",
-        ne_act.shape,
-    )
+    cp = pd.read_csv(cp_path)
+    ne = pd.read_csv(ne_path)
 
-    cp_act["Assay"] = "Cell Painting"
-    ne_act["Assay"] = "nELISA"
+    print(f"Cell Painting {label} shape:", cp.shape, f"nELISA {label} shape:", ne.shape)
 
-    tech_map = pd.concat([cp_act, ne_act], ignore_index=True)
-    tech_map["-log10(mAP p-value)"] = -np.log10(tech_map["corrected_p_value"])
-    tech_map.rename(
+    cp["Assay"] = "Cell Painting"
+    ne["Assay"] = "nELISA"
+
+    df = pd.concat([cp, ne], ignore_index=True)
+    df["-log10(mAP p-value)"] = -np.log10(df["corrected_p_value"])
+    df.rename(
         columns={"mean_average_precision": "mAP", "below_corrected_p": "p < 0.05"},
         inplace=True,
     )
-    print("Combined activity map shape:", tech_map.shape)
-    return tech_map
-
-
-def load_and_combine_consistency_maps() -> pd.DataFrame:
-    """
-    Load and combine phenotypic consistency maps for Cell Painting and nELISA.
-    """
-    cp_cons = pd.read_csv("outputs/cp_all_map_consistency_results.csv")
-    ne_cons = pd.read_csv("outputs/ne_all_map_consistency_results.csv")
-    print(
-        "Cell Painting consistency shape:",
-        cp_cons.shape,
-        "nELISA consistency shape:",
-        ne_cons.shape,
-    )
-
-    cp_cons["Assay"] = "Cell Painting"
-    ne_cons["Assay"] = "nELISA"
-
-    bio_map_all = pd.concat([cp_cons, ne_cons], ignore_index=True)
-    bio_map_all["-log10(mAP p-value)"] = -np.log10(bio_map_all["corrected_p_value"])
-    bio_map_all.rename(
-        columns={"mean_average_precision": "mAP", "below_corrected_p": "p < 0.05"},
-        inplace=True,
-    )
-    print("Combined consistency map shape:", bio_map_all.shape)
-    return bio_map_all
+    print(f"Combined {label} map shape:", df.shape)
+    return df
 
 
 def plot_scatter_comparison(
@@ -75,6 +54,10 @@ def plot_scatter_comparison(
     corner_v_offset: float,
     save_prefix: str = None,
     output_dir: Path = None,
+    point_size: int = 5,
+    h_offset_bottom: float = None,
+    v_offset_bottom: float = None,
+    fig_size: tuple = (4.5, 4.5),
 ) -> None:
     """
     Create a scatter plot comparing -log10(mAP p-value) for two assays and optionally save the figure.
@@ -107,20 +90,20 @@ def plot_scatter_comparison(
         index=pivot_index, columns="Assay", values="-log10(mAP p-value)"
     ).reset_index()
 
-    fig = plt.figure(figsize=(4.5, 4.5))
-    ax = sns.scatterplot(data=df_pivot, x=x_label, y=y_label)
+    fig = plt.figure(figsize=fig_size)
+    ax = sns.scatterplot(data=df_pivot, x=x_label, y=y_label, s=point_size)
 
     ax.axhline(threshold, color="grey", linestyle="--")
     ax.axvline(threshold, ymax=0.9, color="grey", linestyle="--")
-    ax.text(
-        0.02,
-        threshold / df_pivot[y_label].max() + threshold_text_v_offset,
-        "p=0.05",
-        transform=ax.transAxes,
-        color="grey",
-        fontsize=12,
-        fontstyle="italic",
-    )
+    # ax.text(
+    #     0.02,
+    #     threshold / df_pivot[y_label].max() + threshold_text_v_offset,
+    #     "p=0.05",
+    #     transform=ax.transAxes,
+    #     color="grey",
+    #     fontsize=12,
+    #     fontstyle="italic",
+    # )
     plt.xlabel(f"-log10(mAP p-value), {x_label}")
     plt.ylabel(f"-log10(mAP p-value), {y_label}")
 
@@ -135,57 +118,45 @@ def plot_scatter_comparison(
         prefix="Retrieved: ",
         h_offset=corner_h_offset,
         v_offset=corner_v_offset,
+        h_offset_bottom=h_offset_bottom,
+        v_offset_bottom=v_offset_bottom,
     )
-
-    if save_prefix is not None and output_dir is not None:
-        output_dir.mkdir(parents=True, exist_ok=True)
-        png_file = output_dir / f"{save_prefix}.png"
-        svg_file = output_dir / f"{save_prefix}.svg"
-        fig.savefig(png_file, format="png", bbox_inches="tight")
-        fig.savefig(svg_file, format="svg", bbox_inches="tight")
-        print(f"Saved scatter plot as:\n  {png_file}\n  {svg_file}")
-
+    save_plot(fig, save_prefix, output_dir)
     plt.show()
 
 
-def save_map_plot(fig, filename_prefix: str, output_dir: Path) -> None:
-    """
-    Save a given figure in both PNG and SVG formats.
-
-    Parameters
-    ----------
-    fig : matplotlib.figure.Figure
-        The figure to save.
-    filename_prefix : str
-        Prefix for the saved files.
-    output_dir : Path
-        Directory where files will be saved.
-    """
-    output_dir.mkdir(parents=True, exist_ok=True)
-    png_file = output_dir / f"{filename_prefix}.png"
-    svg_file = output_dir / f"{filename_prefix}.svg"
-    fig.savefig(png_file, format="png", bbox_inches="tight")
-    fig.savefig(svg_file, format="svg", bbox_inches="tight")
-    print(f"Saved map plot as:\n  {png_file}\n  {svg_file}")
-    plt.close(fig)
-
-
 def main():
-    set_plotting_style()
+    set_plotting_style(font_size=5, linewidth=0.35)
     output_dir = Path("outputs")
 
     # Load and plot phenotypic activity maps
-    tech_map = load_and_combine_activity_maps()
-    print("Plotting phenotypic activity map...")
-    fig1 = plot_map_scatter(
-        tech_map, "Assay", "", pr_x=0.5, pr_y=0.02, m_x=0.52, m_y=0.02, kde_y=0.75
+    activity_df = load_and_combine_maps(
+        "outputs/cp_map_activity_results.csv",
+        "outputs/ne_map_activity_results.csv",
+        label="activity",
     )
-    if fig1 is None:
-        fig1 = plt.gcf()
-    save_map_plot(fig1, "activity_map", output_dir)
+
+    print("Plotting phenotypic activity map...")
+    fig1 = plot_map_scatter_kde(
+        activity_df,
+        "Assay",
+        "",
+        pr_x=0.45,
+        pr_y=0.02,
+        m_x=0.52,
+        m_y=0.02,
+        l_x=1.1,
+        l_y=0.575,
+        kde_y=0.75,
+        size_rescale=0.31,
+        point_size=5,
+        legend=True,
+        legend_frameon=True,
+    )
+    save_plot(fig1, "activity_map", output_dir)
 
     plot_scatter_comparison(
-        data=tech_map,
+        data=activity_df,
         pivot_index="Metadata_broad_sample",
         x_label="Cell Painting",
         y_label="nELISA",
@@ -195,20 +166,35 @@ def main():
         corner_v_offset=0.01,
         save_prefix="activity_scatter",
         output_dir=output_dir,
+        fig_size=(1, 1),
+        point_size=3,
+        h_offset_bottom=0,
+        v_offset_bottom=-0.01,
     )
 
     # Load and plot phenotypic consistency maps
-    bio_map_all = load_and_combine_consistency_maps()
-    print("Plotting phenotypic consistency map...")
-    fig2 = plot_map_scatter(
-        bio_map_all, "Assay", "", pr_x=0.5, pr_y=0.02, m_x=0.52, m_y=0.02, kde_y=0.65
+    consistency_df = load_and_combine_maps(
+        "outputs/cp_all_map_consistency_results.csv",
+        "outputs/ne_all_map_consistency_results.csv",
+        label="consistency",
     )
-    if fig2 is None:
-        fig2 = plt.gcf()
-    save_map_plot(fig2, "consistency_map", output_dir)
+    print("Plotting phenotypic consistency map...")
+    fig2 = plot_map_scatter_kde(
+        consistency_df,
+        "Assay",
+        "",
+        pr_x=0.5,
+        pr_y=0.02,
+        m_x=0.52,
+        m_y=0.02,
+        kde_y=0.65,
+        size_rescale=0.31,
+        point_size=5,
+    )
+    save_plot(fig2, "consistency_map", output_dir)
 
     plot_scatter_comparison(
-        data=bio_map_all,
+        data=consistency_df,
         pivot_index="Metadata_target",
         x_label="Cell Painting",
         y_label="nELISA",
@@ -218,6 +204,10 @@ def main():
         corner_v_offset=0.02,
         save_prefix="consistency_scatter",
         output_dir=output_dir,
+        fig_size=(1, 1),
+        point_size=3,
+        h_offset_bottom=0.1,
+        v_offset_bottom=-0.01,
     )
 
 

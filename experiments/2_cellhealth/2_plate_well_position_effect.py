@@ -14,23 +14,14 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 
-from map_utils.map import calculate_map
-from map_utils.plot import plot_map_scatter, set_plotting_style
+
 from cell_health_utils import (
     subset_6_replicates,
     get_cell_line_colors,
     stouffer_method,
 )
-
-
-def save_fig(fig, filename: str, figure_dir: Path):
-    """Save figure as PNG and SVG with tight layout."""
-    figure_dir.mkdir(parents=True, exist_ok=True)
-    png_file = figure_dir / f"{filename}.png"
-    svg_file = figure_dir / f"{filename}.svg"
-    fig.savefig(png_file, dpi=500, bbox_inches="tight")
-    fig.savefig(svg_file, dpi=500, bbox_inches="tight")
-    print(f"Saved figure:\n  {png_file}\n  {svg_file}")
+from map_utils.map import calculate_map
+from map_utils.plot import plot_map_scatter_kde, set_plotting_style, save_plot
 
 
 def compute_map_results(data_files, cell_lines, mode_configs, map_config):
@@ -87,10 +78,11 @@ def aggregate_results(results_df, results_file):
     return results_agg
 
 
-def plot_results(results_agg, figure_dir):
+def plot_plate_well_map_scatter(results_agg, figure_dir, style_kwargs=None):
     """Plot mAP effects for plate/well position effects."""
+    set_plotting_style(**style_kwargs if style_kwargs else {})
     cell_line_colors = get_cell_line_colors()
-    fig = plot_map_scatter(
+    fig = plot_map_scatter_kde(
         results_agg,
         "mode",
         "",
@@ -98,18 +90,18 @@ def plot_results(results_agg, figure_dir):
         palette=cell_line_colors,
         y_label="Preprocessing",
         row="Preprocessing",
-        move_legend="center left",
+        legend_loc="center left",
         pr_x=0.35,
         pr_y=0.9,
         figure="Fig3A",
+        size_rescale=0.28,
+        point_size=5,
         save_path=None,  # We handle saving manually
     )
-    save_fig(fig, "Fig3A_plate_well_position_effects", figure_dir)
+    save_plot(fig, "Fig3A_plate_well_position_effects", figure_dir)
 
 
 def main():
-    set_plotting_style()
-
     output_dir = Path("outputs")
     figure_dir = output_dir / "figures"
     results_file = output_dir / "plate_well_position_map.csv"
@@ -143,10 +135,14 @@ def main():
         "groupby_columns": ["Metadata_pert_name"],
     }
 
-    results_df = compute_map_results(data_files, cell_lines, mode_configs, map_config)
-    results_agg = aggregate_results(results_df, results_file)
+    if results_file.exists():
+        print(f"Loading existing results from: {results_file}")
+        results_agg = pd.read_csv(results_file)
+    else:
+        results_df = compute_map_results(data_files, cell_lines, mode_configs, map_config)
+        results_agg = aggregate_results(results_df, results_file)
 
-    plot_results(results_agg, figure_dir)
+    plot_plate_well_map_scatter(results_agg, figure_dir, style_kwargs={"font_size": 5, "linewidth": 0.35})
 
 
 if __name__ == "__main__":

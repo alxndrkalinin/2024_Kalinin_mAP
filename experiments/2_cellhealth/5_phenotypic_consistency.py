@@ -13,26 +13,12 @@ import plotnine as gg
 from pycytominer import aggregate
 
 from map_utils.map import calculate_map
-from map_utils.plot import plot_map_scatter, set_plotting_style
-from cell_health_utils import subset_6_replicates, get_cell_line_colors
-
-
-def save_plot(plot_obj, base_name, output_dir, dpi=500, width=8, height=4):
-    output_dir.mkdir(parents=True, exist_ok=True)
-    svg_path = output_dir / f"{base_name}.svg"
-    png_path = output_dir / f"{base_name}.png"
-    if hasattr(plot_obj, "save"):
-        plot_obj.save(
-            str(svg_path), dpi=dpi, height=height, width=width, bbox_inches="tight"
-        )
-        plot_obj.save(
-            str(png_path), dpi=dpi, height=height, width=width, bbox_inches="tight"
-        )
-    elif hasattr(plot_obj, "savefig"):
-        plot_obj.savefig(str(svg_path), dpi=dpi, bbox_inches="tight")
-        plot_obj.savefig(str(png_path), dpi=dpi, bbox_inches="tight")
-    else:
-        raise TypeError("Plot object does not have a save or savefig method.")
+from map_utils.plot import plot_map_scatter_kde, set_plotting_style, save_plot
+from cell_health_utils import (
+    subset_6_replicates,
+    get_cell_line_colors,
+    plot_ap_per_label,
+)
 
 
 def load_data(profiles_path, phen_activity_path):
@@ -125,63 +111,44 @@ def apply_jitter(map_results, pvalue_jitter_strength=0.2, map_jitter_strength=0.
 
 
 def plot_fig3E(results_jitter, cell_line_colors, fig_dir):
-    plot_obj = plot_map_scatter(
+    plot_obj = plot_map_scatter_kde(
         results_jitter,
         "const",
         "",
         hue_col="Cell type",
         palette=cell_line_colors,
         row=None,
-        move_legend="center left",
-        pr_x=0.1,
+        legend_loc="center left",
+        pr_x=0.05,
         pr_y=0.75,
         l_x=1.15,
         l_y=0.8,
+        size_rescale=0.31,
+        point_size=5,
         figure="Fig3E",
         save_path=str(fig_dir),
     )
     save_plot(plot_obj, "Fig3E", fig_dir, dpi=500, width=8, height=4)
 
 
-def plot_fig3F(ap_results, map_results, cell_line_colors, fig_dir):
+def plot_fig3F(ap_results, map_results, cell_line_colors, fig_dir, width=8, height=4):
     gene_counts = map_results[map_results["p < 0.05"]].Metadata_gene_name.value_counts()
     genes_consistent = gene_counts[gene_counts > 1].index.tolist()  # noqa
+    genes_consistent = genes_consistent
     consistent_results = ap_results.query("Metadata_gene_name in @genes_consistent")
-    gene_gg = (
-        gg.ggplot(
-            consistent_results,
-            gg.aes(x="AP", y="-log10(AP p-value)", color="Cell type"),
-        )
-        + gg.geom_jitter(
-            data=consistent_results[~consistent_results["p < 0.05"]],
-            shape="s",
-            size=1.2,
-        )
-        + gg.geom_jitter(
-            data=consistent_results[consistent_results["p < 0.05"]], shape="o", size=1.2
-        )
-        + gg.geom_hline(yintercept=-np.log10(0.05), linetype="dashed", color="grey")
-        + gg.theme_bw()
-        + gg.xlab("AP")
-        + gg.ylab("-log10(AP p-value)")
-        + gg.facet_wrap("~Metadata_gene_name", ncol=5)
-        + gg.scale_color_manual(values=cell_line_colors)
-        + gg.scale_x_continuous(breaks=[0, 0.5, 1.0], labels=["0", "0.5", "1"])
-        + gg.theme(
-            strip_background=gg.element_rect(colour="black", fill="#fdfff4"),
-            axis_text=gg.element_text(size=10),
-            text=gg.element_text(family="Open Sans", size=14),
-            axis_title=gg.element_text(family="Open Sans", size=14),
-            legend_title=gg.element_text(margin={"b": 20}),
-            strip_text=gg.element_text(size=10, family="Open Sans"),
-            figure_size=(8, 4),
-        )
+    gene_gg = plot_ap_per_label(
+        consistent_results,
+        "Metadata_gene_name",
+        cell_line_colors,
+        width=width,
+        height=height,
+        ncol=5,
     )
-    save_plot(gene_gg, "Fig3F", fig_dir, dpi=500, width=8, height=4)
+    save_plot(gene_gg, "Fig3F", fig_dir, dpi=500, width=width, height=height)
 
 
 def main():
-    set_plotting_style()
+    set_plotting_style(font_size=5, linewidth=0.35)
     cell_lines = ["A549", "ES2", "HCC44"]
     cell_line_colors = get_cell_line_colors()
 
@@ -201,13 +168,24 @@ def main():
     ap_results, map_results = compute_map_metrics(
         ch_df_agg, replicable_genes, cell_lines
     )
+    ap_results.to_csv(
+        output_dir / "phenotypic_consistency_ap.csv", index=False
+    )
+    map_results.to_csv(
+        output_dir / "phenotypic_consistency_map.csv", index=False
+    )
+
+    ap_results = pd.read_csv(output_dir / "phenotypic_consistency_ap.csv")
+    map_results = pd.read_csv(output_dir / "phenotypic_consistency_map.csv")
     results_jitter = apply_jitter(map_results)
 
     fig_dir = Path("outputs/figures")
     fig_dir.mkdir(parents=True, exist_ok=True)
 
     plot_fig3E(results_jitter, cell_line_colors, fig_dir)
-    plot_fig3F(ap_results, map_results, cell_line_colors, fig_dir)
+    plot_fig3F(
+        ap_results, map_results, cell_line_colors, fig_dir, width=1.86, height=1.24
+    )
 
 
 if __name__ == "__main__":

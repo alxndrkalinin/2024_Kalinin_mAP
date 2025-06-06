@@ -7,27 +7,20 @@
 #  (retrieval its replicates against negative controls) for different subsets of features.
 
 import pathlib
-import matplotlib.pyplot as plt
+
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import matplotlib.pyplot as plt
+from pycytominer.cyto_utils import infer_cp_features
 
 from cell_health_utils import (
     subset_6_replicates,
     get_cell_line_colors,
     get_control_barcodes,
 )
-from pycytominer.cyto_utils import infer_cp_features
 from map_utils.map import calculate_map
-from map_utils.plot import set_plotting_style
-
-
-def save_matplotlib_fig(fig, base_name, output_dir, dpi=300):
-    output_dir.mkdir(parents=True, exist_ok=True)
-    png_path = output_dir / f"{base_name}.png"
-    svg_path = output_dir / f"{base_name}.svg"
-    fig.savefig(png_path, dpi=dpi, bbox_inches="tight")
-    fig.savefig(svg_path, dpi=dpi, bbox_inches="tight")
+from map_utils.plot import set_plotting_style, save_plot
 
 
 def process_channel_analysis(profiles, cell_lines, channels, pair_config, map_config):
@@ -68,18 +61,29 @@ def process_channel_analysis(profiles, cell_lines, channels, pair_config, map_co
     return per_channel_df
 
 
-def plot_channel_analysis(per_channel_df, cell_line_colors, output_dir):
+def plot_channel_analysis(
+    per_channel_df, output_dir, height=3, point_size=30, style_kwargs=None
+):
+    set_plotting_style(**style_kwargs if style_kwargs else {})
+    cell_line_colors = get_cell_line_colors()
     p_threshold = -np.log10(0.05)
     g = sns.FacetGrid(
         per_channel_df,
         col="channel",
         hue="cell_type",
-        height=3,
+        height=height,
         aspect=0.5,
         hue_order=list(cell_line_colors.keys()),
         palette=cell_line_colors,
     )
-    g.map(sns.scatterplot, "dropped", "exclusive", alpha=0.6, s=30, edgecolor="none")
+    g.map(
+        sns.scatterplot,
+        "dropped",
+        "exclusive",
+        alpha=0.6,
+        s=point_size,
+        edgecolor="none",
+    )
 
     def add_diag_line(*args, **kwargs):
         ax = plt.gca()
@@ -121,7 +125,8 @@ def plot_channel_analysis(per_channel_df, cell_line_colors, output_dir):
         0.48, 0.025, "-log10(mAP p-value), channel dropped", ha="center", va="center"
     )
     g.set_titles("{col_name}")
-    g.fig.set_size_inches(13, 2.5)
+    # g.fig.set_size_inches(13, 2.5)
+    g.fig.set_size_inches(3.46, 0.85)
     plt.tight_layout()
     plt.legend(
         title="Cell type",
@@ -130,7 +135,7 @@ def plot_channel_analysis(per_channel_df, cell_line_colors, output_dir):
         borderaxespad=0,
         frameon=False,
     )
-    save_matplotlib_fig(g.fig, "Fig3D_channel", output_dir)
+    save_plot(g.fig, "Fig3D_channel", output_dir)
     return g
 
 
@@ -204,7 +209,7 @@ def process_compartment_analysis(profiles, cell_lines, pair_config, map_config):
     return per_featuregroup_df
 
 
-def plot_compartment_analysis(per_featuregroup_df, cell_line_colors, output_dir):
+def plot_compartment_analysis(per_featuregroup_df, output_dir, style_kwargs=None):
     def add_diag_line(*args, **kwargs):
         ax = plt.gca()
         ax.axline((0, 0), slope=1, color="red", linestyle="dashed", lw=0.5)
@@ -232,6 +237,8 @@ def plot_compartment_analysis(per_featuregroup_df, cell_line_colors, output_dir)
             va="bottom",
         )
 
+    set_plotting_style(**style_kwargs if style_kwargs else {})
+    cell_line_colors = get_cell_line_colors()
     g = sns.FacetGrid(
         per_featuregroup_df,
         col="feature_group",
@@ -265,22 +272,23 @@ def plot_compartment_analysis(per_featuregroup_df, cell_line_colors, output_dir)
     )
     plt.tight_layout()
     plt.legend(title="Cell type", bbox_to_anchor=(1.85, 2), frameon=False)
-    save_matplotlib_fig(g.fig, "Fig3D_compartment", output_dir)
+    save_plot(g.fig, "Fig3D_compartment", output_dir)
     return g
 
 
 def main():
-    set_plotting_style()
-    cell_line_colors = get_cell_line_colors()
-
     profiles_path = pathlib.Path(
         "outputs/cell_health_profiles_merged_wholeplate_normalized_featureselected.tsv.gz"
     )
     profiles = pd.read_csv(profiles_path, sep="\t")
     print(profiles.shape)
 
-    output_dir = pathlib.Path("outputs/figures")
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = pathlib.Path("outputs")
+    figure_dir = output_dir / "figures"
+    figure_dir.mkdir(parents=True, exist_ok=True)
+
+    channel_map_results = output_dir / "channel_analysis.csv"
+    compartment_map_results = output_dir / "compartment_analysis.csv"
 
     pair_config = {
         "pos_sameby": ["Metadata_pert_name", "Metadata_control_index"],
@@ -292,16 +300,38 @@ def main():
 
     # Process and plot channel analysis
     channels = ["DNA", "RNA", "Mito", "AGP", "ER"]
-    per_channel_df = process_channel_analysis(
-        profiles, list(cell_line_colors.keys()), channels, pair_config, map_config
+    cell_lines = get_cell_line_colors().keys()
+    if channel_map_results.exists():
+        print(f"Loading existing channel analysis results from {channel_map_results}")
+        per_channel_df = pd.read_csv(channel_map_results)
+    else:
+        per_channel_df = process_channel_analysis(
+            profiles, cell_lines, channels, pair_config, map_config
+        )
+        per_channel_df.to_csv(
+            channel_map_results, index=False
+        )
+
+    style = {"font_size": 5, "linewidth": 0.35}
+    plot_channel_analysis(
+        per_channel_df, figure_dir, height=3, point_size=3, style_kwargs=style
     )
-    plot_channel_analysis(per_channel_df, cell_line_colors, output_dir)
 
     # Process and plot compartment analysis
-    per_featuregroup_df = process_compartment_analysis(
-        profiles, list(cell_line_colors.keys()), pair_config, map_config
-    )
-    plot_compartment_analysis(per_featuregroup_df, cell_line_colors, output_dir)
+    if compartment_map_results.exists():
+        print(
+            f"Loading existing compartment analysis results from {compartment_map_results}"
+        )
+        per_featuregroup_df = pd.read_csv(compartment_map_results)
+    else:
+        per_featuregroup_df = process_compartment_analysis(
+            profiles, cell_lines, pair_config, map_config
+        )
+        per_featuregroup_df.to_csv(
+            output_dir / "compartment_analysis.csv", index=False
+        )
+    style = {"font_size": 16, "linewidth": 1}
+    plot_compartment_analysis(per_featuregroup_df, figure_dir, style_kwargs=style)
 
 
 if __name__ == "__main__":

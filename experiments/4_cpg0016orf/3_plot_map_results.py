@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
-from map_utils.plot import plot_map_scatter, set_plotting_style
+from map_utils.plot import plot_map_scatter_kde, set_plotting_style
 
 
 def process_map(file_path: Path) -> pd.DataFrame:
@@ -28,7 +28,9 @@ def plot_and_save_map(data: pd.DataFrame, prefix: str, output_dir: Path) -> None
     """
     Plot the map using plot_map_scatter and save the figure in PNG and SVG formats.
     """
-    fig = plot_map_scatter(data, "const", "", pr_x=0.45, pr_y=0.02, l_x=1.1, l_y=0.58)
+    fig = plot_map_scatter_kde(
+        data, "const", "", pr_x=0.45, pr_y=0.02, l_x=1.1, l_y=0.58
+    )
 
     output_dir.mkdir(parents=True, exist_ok=True)
     png_file = output_dir / f"{prefix}.png"
