@@ -13,9 +13,10 @@
 from pathlib import Path
 
 import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
 
-from map_utils.plot import set_plotting_style
+from map_utils.plot import set_plotting_style, save_plot
 from simulation_utils import (
     get_figure2_palette,
     get_figureS5_palette,
@@ -23,27 +24,16 @@ from simulation_utils import (
 )
 
 
-def save_figure(fig, base_name, output_dir, dpi=300):
-    """
-    Save a matplotlib figure in both PNG and SVG formats with a tight layout.
-    """
-    output_dir.mkdir(parents=True, exist_ok=True)
-    png_path = output_dir / f"{base_name}.png"
-    svg_path = output_dir / f"{base_name}.svg"
-    fig.savefig(png_path, dpi=dpi, bbox_inches="tight")
-    fig.savefig(svg_path, dpi=dpi, bbox_inches="tight")
-
-
-def plot_and_save(csv_path, metrics, palette, figure_name, output_dir):
+def plot_and_save(
+    csv_path, metrics, palette, figure_name, output_dir, plot_params=None
+):
     """
     Load simulated data from CSV, plot simulation results, and save the figure.
     """
     data = pd.read_csv(csv_path)
-    fig = plot_simulation_results(data, metrics, palette=palette)
-    # If the plotting function does not return a figure, grab the current one.
-    if fig is None:
-        fig = plt.gcf()
-    save_figure(fig, figure_name, output_dir)
+    plot_params = {} if plot_params is None else plot_params
+    fig = plot_simulation_results(data, metrics, palette=palette, **plot_params)
+    save_plot(fig, figure_name, output_dir)
     plt.close(fig)
 
 
@@ -65,17 +55,30 @@ def plot_figureS5(
     fig = plot_simulation_results(distances_df, metrics=metrics, palette=palette)
     if fig is None:
         fig = plt.gcf()
-    save_figure(fig, figure_name, output_dir)
+    save_plot(fig, figure_name, output_dir)
     plt.close(fig)
 
 
 def main():
-    set_plotting_style()
     output_dir = Path("outputs/figures")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     figure2_palette = get_figure2_palette()
     figure_S5_palette = get_figureS5_palette()
+
+    plot_params = None
+    set_plotting_style(font_size=16, linewidth=1)
+    sns.set_theme(style="white", rc={"lines.markeredgewidth": 0})
+
+    # # uncomment for single-column format
+    # set_plotting_style(font_size=5, linewidth=0.75)
+    # plot_params = {
+    #     "height": 1,
+    #     "ylim": (0, 1),
+    #     "font_size": 5,
+    #     "markersize": 3,
+    #     "labelrotation": 0,
+    # }
 
     # Figure 2: Benchmarking mAP vs mp-value, MMD, and k-means on simulated data.
     plot_and_save(
@@ -84,6 +87,7 @@ def main():
         palette=figure2_palette,
         figure_name="Figure2",
         output_dir=output_dir,
+        plot_params=plot_params,
     )
 
     # Figure S2: Same as Figure 2, but with X axis spanning 0-100% feature change.

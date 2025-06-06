@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "map_utils"
-version = "0.1"
+version = "0.3.0"
 dependencies = [
     "numpy==2.0.2",
     "mygene==3.2.2",
@@ -26,9 +26,12 @@ requires-python = "==3.11"
 authors = [
   {name = "Alexandr Kalinin", email = "akalinin@broadinstitute.org"},
 ]
-description = "Utilities for the (Kalinin et al., 2024) mAP paper"
+description = "Utility package for reproducing results in Kalinin et al. 2025, Nature Communications."
 readme = "README.md"
 license = {file = "LICENSE"}
+
+[project.urls]
+"Publication" = "https://doi.org/10.1038/s41467-025-60306-2"
 
 [tool.setuptools.packages.find]
 where = ["."]

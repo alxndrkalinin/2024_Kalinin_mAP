@@ -10,24 +10,10 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from map_utils.plot import plot_map_scatter, set_plotting_style
+from map_utils.plot import plot_map_scatter_kde, set_plotting_style, save_plot
 from mitocheck_plot_utils import get_umap_palette, plot_gene_vs_ms, plot_mc_cp_vs_dp
 
 warnings.filterwarnings("ignore", category=FutureWarning, module="pandas")
-
-
-def save_figure(
-    fig: plt.Figure, base_name: str, output_dir: Path, dpi: int = 300
-) -> None:
-    """
-    Save a matplotlib figure in both PNG and SVG formats under the output directory.
-    """
-    output_dir.mkdir(parents=True, exist_ok=True)
-    png_path = output_dir / f"{base_name}.png"
-    svg_path = output_dir / f"{base_name}.svg"
-    fig.savefig(png_path, dpi=dpi, bbox_inches="tight")
-    fig.savefig(svg_path, dpi=dpi, bbox_inches="tight")
-    print(f"Saved figure {base_name} as PNG and SVG in {output_dir}")
 
 
 def load_and_prepare_ap_results(ap_csv_path: str) -> pd.DataFrame:
@@ -47,24 +33,23 @@ def plot_map_results(ap_df: pd.DataFrame, fig_name: str, fig_dir: Path) -> None:
     """
     Plot the map results using the provided AP DataFrame and save the figure.
     """
-    plot_map_scatter(
+    fig = plot_map_scatter_kde(
         ap_df,
         "Features",
         "",
         metric="AP",
         row=None,
-        move_legend="lower right",
+        legend_loc="lower right",
         aspect=None,
         adjust=None,
         pr_x=0.5,
         pr_y=0.02,
-        l_x=1.05,
-        l_y=0.575,
+        l_x=1.15,
+        l_y=0.5,
         m_x=0.52,
         m_y=0.01,
     )
-    fig = plt.gcf()
-    save_figure(fig, fig_name, fig_dir)
+    save_plot(fig, fig_name, fig_dir)
     plt.close(fig)
 
 
@@ -73,6 +58,7 @@ def prepare_and_plot_gene_vs_ms(
     morphoclass_ap: pd.DataFrame,
     fig_name_prefix: str,
     fig_dir: Path,
+    plot_kwargs: dict = None,
 ) -> None:
     """
     Prepare DataFrames for gene vs. morphological class retrieval and plot using plot_gene_vs_ms.
@@ -93,10 +79,8 @@ def prepare_and_plot_gene_vs_ms(
             ],
         }
     )
-    plot_gene_vs_ms(aps_cp, title="CellProfiler features")
-    fig_cp = plt.gcf()
-    save_figure(fig_cp, f"{fig_name_prefix}_CellProfiler", fig_dir)
-    plt.close(fig_cp)
+    fig_cp = plot_gene_vs_ms(aps_cp, title="CellProfiler features", **plot_kwargs)
+    save_plot(fig_cp, f"{fig_name_prefix}_CellProfiler", fig_dir)
 
     # For DeepProfiler features.
     aps_dp = pd.DataFrame(
@@ -113,14 +97,15 @@ def prepare_and_plot_gene_vs_ms(
             ],
         }
     )
-    plot_gene_vs_ms(aps_dp, title="DeepProfiler features")
-    fig_dp = plt.gcf()
-    save_figure(fig_dp, f"{fig_name_prefix}_DeepProfiler", fig_dir)
-    plt.close(fig_dp)
+    fig_dp = plot_gene_vs_ms(aps_dp, title="DeepProfiler features", **plot_kwargs)
+    save_plot(fig_dp, f"{fig_name_prefix}_DeepProfiler", fig_dir)
 
 
 def prepare_and_plot_mc_cp_vs_dp(
-    morphoclass_ap: pd.DataFrame, fig_name: str, fig_dir: Path
+    morphoclass_ap: pd.DataFrame,
+    fig_name: str,
+    fig_dir: Path,
+    plot_kwargs: dict = None,
 ) -> None:
     """
     Prepare a DataFrame comparing CP and DP retrieval for each morphological class and plot using plot_mc_cp_vs_dp.
@@ -144,9 +129,9 @@ def prepare_and_plot_mc_cp_vs_dp(
             )["p < 0.05"].reset_index(drop=True),
         }
     )
-    plot_mc_cp_vs_dp(aps, hue="Morphological Class")
+    plot_mc_cp_vs_dp(aps, hue="Morphological Class", **plot_kwargs)
     fig = plt.gcf()
-    save_figure(fig, fig_name, fig_dir)
+    save_plot(fig, fig_name, fig_dir)
     plt.close(fig)
 
 
@@ -189,7 +174,7 @@ def plot_boxplot_comparison(
     )
     ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
     plt.legend(frameon=False, title=None, loc="upper center")
-    save_figure(fig, fig_name, fig_dir)
+    save_plot(fig, fig_name, fig_dir)
     plt.close(fig)
 
 
@@ -328,12 +313,11 @@ def plot_umap_by_morpho_class(aps_retrieval, fig_dir, output_dir):
             frameon=False,
         )
 
-        save_figure(fig, f"UMAP_{morpho_class}", fig_dir)
+        save_plot(fig, f"UMAP_{morpho_class}", fig_dir)
         plt.close(fig)
 
 
 def main():
-    set_plotting_style()
     output_dir = Path("outputs")
     fig_dir = output_dir / "figures"
     fig_dir.mkdir(parents=True, exist_ok=True)
@@ -344,16 +328,41 @@ def main():
     )
 
     # Plot map results for both gene and morphological class AP.
+    set_plotting_style(font_size=16, linewidth=1)
     plot_map_results(gene_ap, "Map_Gene_AP", fig_dir)
     plot_map_results(morphoclass_ap, "Map_Morphoclass_AP", fig_dir)
 
     # Plot gene vs. morphological class AP retrieval.
-    prepare_and_plot_gene_vs_ms(gene_ap, morphoclass_ap, "Gene_vs_Morphoclass", fig_dir)
+    set_plotting_style(font_size=5, linewidth=0.35)
+    prepare_and_plot_gene_vs_ms(
+        gene_ap,
+        morphoclass_ap,
+        "Gene_vs_Morphoclass",
+        fig_dir,
+        plot_kwargs={
+            "width": 1.2,
+            "height": 1.2,
+            "point_size": 1,
+            "title_font_size": 5,
+            "legend_markersize": 2,
+        },
+    )
 
     # Plot morphological class comparison between CP and DP features.
-    prepare_and_plot_mc_cp_vs_dp(morphoclass_ap, "MC_CP_vs_DP", fig_dir)
+    prepare_and_plot_mc_cp_vs_dp(
+        morphoclass_ap,
+        "MC_CP_vs_DP",
+        fig_dir,
+        plot_kwargs={
+            "width": 1.3,
+            "height": 1.3,
+            "point_size": 1.5,
+            "legend_markersize": 2,
+        },
+    )
 
     # Plot a boxplot comparison by morphological class.
+    set_plotting_style(font_size=16, linewidth=1)
     plot_boxplot_comparison(morphoclass_ap, "Boxplot_Morphoclass", fig_dir)
 
     # Plot UMAP embeddings by morphological class.

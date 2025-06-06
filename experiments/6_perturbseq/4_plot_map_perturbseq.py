@@ -15,25 +15,7 @@ import pandas as pd
 import plotnine as gg
 import seaborn as sns
 
-from map_utils.plot import set_plotting_style
-
-
-def save_plot(
-    plot_obj, filename_prefix: str, output_dir: Path, dpi=500, height=5, width=6
-):
-    """
-    Save a plotnine plot to both PNG and SVG formats.
-    """
-    output_dir.mkdir(parents=True, exist_ok=True)
-    png_file = output_dir / f"{filename_prefix}.png"
-    svg_file = output_dir / f"{filename_prefix}.svg"
-    plot_obj.save(
-        filename=str(png_file), dpi=dpi, height=height, width=width, bbox_inches="tight"
-    )
-    plot_obj.save(
-        filename=str(svg_file), dpi=dpi, height=height, width=width, bbox_inches="tight"
-    )
-    print(f"Saved plot as:\n  {png_file}\n  {svg_file}")
+from map_utils.plot import set_plotting_style, save_plot, plot_map_activity_scatter
 
 
 def load_bulk_map(gse_id: str, results_dir: Path) -> pd.DataFrame:
@@ -42,66 +24,98 @@ def load_bulk_map(gse_id: str, results_dir: Path) -> pd.DataFrame:
     """
     bulk_file = results_dir / f"{gse_id}_map.tsv"
     bulk_df = pd.read_csv(bulk_file, sep="\t")
-    # Set gene as a categorical variable
     bulk_df["gene"] = pd.Categorical(bulk_df.gene, categories=bulk_df.gene.unique())
     print("Bulk map data shape:", bulk_df.shape)
     print(bulk_df.head(2))
     return bulk_df
 
 
-def create_bulk_scatter_plots(bulk_df: pd.DataFrame, output_dir: Path, gse_id: str):
+def make_colormap() -> dict:
+    """
+    Create a color map for the scatter plot.
+    """
+    palette = sns.color_palette().as_hex()
+    return {False: palette[0], True: palette[1]}
+
+
+def create_bulk_scatter_plots(
+    bulk_df: pd.DataFrame,
+    output_dir: Path,
+    gse_id: str,
+    colormap=None,
+    scatterplot_size=(3, 2),
+    faceted_size=(5, 6),
+):
     """
     Create and save global and facet scatter plots for bulk data.
     """
-    # Define color map
-    palette = sns.color_palette().as_hex()
-    color_map = {False: palette[0], True: palette[1]}
-
-    # Global scatter plot (with linear regression smoothing)
-    global_gg = (
-        gg.ggplot(
-            bulk_df, gg.aes(x="relative_activity_day5", y="mAP", color="p < 0.05")
-        )
-        + gg.geom_point(alpha=1.0, size=1)
-        + gg.geom_smooth(method="lm", color="black")
-        + gg.theme_bw()
-        + gg.xlab("Mismatched guide RNA activity relative to perfect match")
-        + gg.ylab("mAP")
-        + gg.scale_color_manual(values=color_map)
+    global_gg = plot_map_activity_scatter(
+        df=bulk_df,
+        x="relative_activity_day5",
+        y="mAP",
+        aes_mapping={"fill": "p < 0.05"},
+        add_linear_model=True,
+        x_label="Mismatched guide RNA activity relative to perfect match",
+        y_label="mAP",
+        scale_manual_values=colormap,
+        point_size=1.0,
+        point_alpha=1.0,
+        y_range=(0, 1.0),
+        x_range=(0, bulk_df.relative_activity_day5.max()),
+        x_scale={
+            "breaks": [0, 0.5, 1],
+            "labels": ["0", "0.5", "1"],
+            "minor_breaks": [],
+        },
+        y_scale={
+            "breaks": [0, 0.5, 1],
+            "labels": ["0", "0.5", "1"],
+            "minor_breaks": [],
+        },
+        width=scatterplot_size[0],
+        height=scatterplot_size[1],
     )
+
     save_plot(
         global_gg,
         f"{gse_id}_crispri_map_relative_activity_global_bulk",
         output_dir,
         dpi=500,
-        height=3.5,
-        width=4,
+        width=scatterplot_size[0],
+        height=scatterplot_size[1],
     )
 
-    # Faceted scatter plot by gene
-    gene_gg = (
-        gg.ggplot(
-            bulk_df, gg.aes(x="relative_activity_day5", y="mAP", color="p < 0.05")
-        )
-        + gg.geom_point(size=1.0)
-        + gg.theme_bw()
-        + gg.xlab("Mismatched guide RNA activity relative to perfect match")
-        + gg.ylab("mAP")
-        + gg.scale_color_manual(values=color_map)
-        + gg.guides(color=gg.guide_colorbar(title="mAP"))
-        + gg.facet_wrap("~gene")
-        + gg.theme(
-            strip_background=gg.element_rect(colour="black", fill="#fdfff4"),
-            axis_text=gg.element_text(size=10),
-        )
+    gene_subset = bulk_df.gene.unique()[:]
+    gene_gg = plot_map_activity_scatter(
+        df=bulk_df.query("gene in @gene_subset"),
+        x="relative_activity_day5",
+        y="mAP",
+        facet="gene",
+        facet_ncol=5,
+        aes_mapping={"fill": "p < 0.05"},
+        x_label="Mismatched guide RNA activity relative to perfect match",
+        y_label="mAP",
+        y_range=(0, 1.05),
+        x_range=(0, bulk_df.relative_activity_day5.max()),
+        scale_manual_values=colormap,
+        point_size=1.0,
+        point_alpha=0.8,
+        point_stroke=0.05,
+        guide_title="mAP",
+        x_scale={
+            "breaks": [0, 0.5, 1],
+            "labels": ["0", "0.5", "1"],
+            "minor_breaks": [],
+        },
+        y_scale={"breaks": [0, 1], "labels": ["0", "1"], "minor_breaks": []},
+        width=faceted_size[0],
+        height=faceted_size[1],
     )
     save_plot(
         gene_gg,
         f"{gse_id}_crispri_map_relative_activity_facet_bulk",
         output_dir,
         dpi=500,
-        height=5,
-        width=6,
     )
 
 
@@ -167,63 +181,78 @@ def load_single_cell_data(
     return sc_df, gene_features
 
 
-def create_singlecell_global_plot(sc_df: pd.DataFrame, output_dir: Path, gse_id: str):
+def create_singlecell_global_plot(
+    sc_df: pd.DataFrame, output_dir: Path, gse_id: str, colormap=None, fig_size=(3, 2)
+):
     """
     Create and save a global scatter plot (density and points) for single cell data.
     """
-    # Define color palette (reuse from bulk)
-    palette = sns.color_palette().as_hex()
-    color_map = {False: palette[0], True: palette[1]}
-
-    global_gg = (
-        gg.ggplot(
-            sc_df.dropna(subset=["Metadata_gene_identity"]),
-            gg.aes(x="relative_activity_day5", y="mAP", color="p < 0.05"),
-        )
-        + gg.geom_density_2d()
-        + gg.geom_point(size=0.2, alpha=0.1)
-        + gg.theme_bw()
-        + gg.xlab("Mismatched guide RNA activity relative to perfect match")
-        + gg.ylab("mAP")
-        + gg.scale_color_manual(values=color_map)
-        + gg.theme(
-            text=gg.element_text(family="Open Sans", size=14),
-            axis_title=gg.element_text(family="Open Sans", size=14),
-            legend_title=gg.element_text(margin={"b": 20}),
-        )
+    singlecell_scatter = plot_map_activity_scatter(
+        df=sc_df,
+        x="relative_activity_day5",
+        y="mAP",
+        aes_mapping={"fill": "p < 0.05"},
+        density_aes={"color": "p < 0.05"},
+        density_size=0.1,
+        x_label="Mismatched guide RNA activity relative to perfect match",
+        y_label="mAP",
+        scale_manual_values=colormap,
+        point_size=0.3,
+        point_alpha=0.3,
+        guide_title="mAP",
+        x_scale={
+            "breaks": [0, 0.5, 1],
+            "labels": ["0", "0.5", "1"],
+            "minor_breaks": [],
+        },
+        y_scale={
+            "breaks": [0, 0.5, 1],
+            "labels": ["0", "0.5", "1"],
+            "minor_breaks": [],
+        },
+        width=fig_size[0],
+        height=fig_size[1],
     )
     save_plot(
-        global_gg, f"{gse_id}_singlecell_global", output_dir, dpi=500, height=5, width=6
+        singlecell_scatter,
+        f"{gse_id}_singlecell_global",
+        output_dir,
+        dpi=500,
+        width=fig_size[0],
+        height=fig_size[1],
     )
 
 
-def create_singlecell_facet_plot(sc_df: pd.DataFrame, output_dir: Path, gse_id: str):
+def create_singlecell_facet_plot(
+    sc_df: pd.DataFrame, output_dir: Path, gse_id: str, colormap=None, fig_size=(3, 2)
+):
     """
     Create and save a faceted scatter plot for single cell data by gene.
     """
-    palette = sns.color_palette().as_hex()
-    color_map = {False: palette[0], True: palette[1]}
-
-    facet_gg = (
-        gg.ggplot(
-            sc_df.dropna(subset=["gene"]),
-            gg.aes(x="relative_activity_day5", y="mAP", color="p < 0.05"),
-        )
-        + gg.geom_density_2d()
-        + gg.geom_point(alpha=0.05, size=0.1)
-        + gg.theme_bw()
-        + gg.xlab("Mismatched guide RNA activity relative to perfect match")
-        + gg.ylab("mAP")
-        + gg.scale_color_manual(values=color_map)
-        + gg.facet_wrap("~gene")
-        + gg.theme(
-            strip_background=gg.element_rect(colour="black", fill="#fdfff4"),
-            axis_text=gg.element_text(size=10),
-            text=gg.element_text(family="Open Sans", size=14),
-            axis_title=gg.element_text(family="Open Sans", size=14),
-            legend_title=gg.element_text(margin={"b": 20}),
-            strip_text=gg.element_text(size=10, family="Open Sans"),
-        )
+    facet_gg = plot_map_activity_scatter(
+        sc_df.dropna(subset=["gene"]),
+        x="relative_activity_day5",
+        y="mAP",
+        facet="gene",
+        facet_ncol=5,
+        aes_mapping={"fill": "p < 0.05"},
+        density_aes={"color": "p < 0.05"},
+        density_size=0.1,
+        point_size=0.1,
+        point_alpha=0.05,
+        x_label="Mismatched guide RNA activity relative to perfect match",
+        y_label="mAP",
+        y_range=(0, 1.05),
+        x_range=(0, sc_df.relative_activity_day5.max()),
+        scale_manual_values=colormap,
+        x_scale={
+            "breaks": [0, 0.5, 1],
+            "labels": ["0", "0.5", "1"],
+            "minor_breaks": [],
+        },
+        y_scale={"breaks": [0, 1], "labels": ["0", "1"], "minor_breaks": []},
+        width=fig_size[0],
+        height=fig_size[1],
     )
     save_plot(
         facet_gg, f"{gse_id}_singlecell_facet", output_dir, dpi=500, height=5, width=6
@@ -295,7 +324,7 @@ def plot_individual_umaps(sc_df: pd.DataFrame, output_dir: Path, gse_id: str):
 
 
 def main():
-    set_plotting_style()
+    set_plotting_style(font_size=5, linewidth=0.35)
 
     gse_id = "GSE132080"
     data_dir = Path("inputs")
@@ -303,12 +332,27 @@ def main():
     figures_dir = results_dir / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
 
+    colormap = make_colormap()
+    scatterplot_size = (1.5, 1.25)
+    faceted_size = (1.86, 1.5)
+
     bulk_df = load_bulk_map(gse_id, results_dir)
-    create_bulk_scatter_plots(bulk_df, figures_dir, gse_id)
+    create_bulk_scatter_plots(
+        bulk_df,
+        figures_dir,
+        gse_id,
+        colormap=colormap,
+        scatterplot_size=scatterplot_size,
+        faceted_size=faceted_size,
+    )
 
     sc_df, _ = load_single_cell_data(gse_id, data_dir, results_dir, bulk_df)
-    create_singlecell_global_plot(sc_df, figures_dir, gse_id)
-    create_singlecell_facet_plot(sc_df, figures_dir, gse_id)
+    create_singlecell_global_plot(
+        sc_df, figures_dir, gse_id, colormap=colormap, fig_size=scatterplot_size
+    )
+    create_singlecell_facet_plot(
+        sc_df, figures_dir, gse_id, colormap=colormap, fig_size=faceted_size
+    )
     plot_individual_umaps(sc_df, figures_dir, gse_id)
 
 

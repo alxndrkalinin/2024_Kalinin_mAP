@@ -18,11 +18,14 @@ def plot_simulation_results(
     df,
     metrics,
     palette=None,
-    save_path=None,
     y_label="Recall",
     title_x="Number of controls",
     title_y="Number of features",
+    height=3,
     ylim=(0, 1),
+    font_size=16,
+    markersize=10,
+    labelrotation=25,
 ):
     """
     Plotting function for simulation results.
@@ -37,7 +40,7 @@ def plot_simulation_results(
     - title_y: Title for the y-axis.
     - ylim: Tuple defining the y-axis limits.
     """
-    plt.rcParams.update({"font.size": 14, "axes.labelsize": 14, "axes.titlesize": 14})
+    # plt.rcParams.update({"font.size": font_size, "axes.labelsize": font_size, "axes.titlesize": font_size})
     palette = sns.color_palette("tab10") if palette is None else palette
 
     df["features_differ"] = df["features_differ"].astype(str)
@@ -49,12 +52,16 @@ def plot_simulation_results(
     )
 
     g = sns.FacetGrid(
-        df_melted, row="n_feats", col="n_controls", height=3, aspect=1.0, ylim=ylim
+        df_melted, row="n_feats", col="n_controls", height=height, aspect=1.0, ylim=ylim
     )
 
-    plt.subplots_adjust(bottom=0.33)
-    g.fig.text(
-        0.45, 0.01, "% features that differ from control", ha="center", fontsize="large"
+    plt.subplots_adjust(bottom=0.4)
+    g.figure.text(
+        0.45,
+        0.00,
+        "% features that differ from control",
+        ha="center",
+        fontsize=font_size,
     )
 
     g.map_dataframe(
@@ -65,16 +72,18 @@ def plot_simulation_results(
         style="# replicates",
         markers=True,
         dashes=True,
-        markersize=10,
+        markersize=markersize,
         palette=palette,
     )
 
-    g.add_legend(bbox_to_anchor=(1.1, 0.5), loc="center right", fontsize="large")
+    g.add_legend(bbox_to_anchor=(1.1, 0.5), loc="center right", fontsize=font_size)
     g.set_axis_labels("", y_label)
-    g.set_titles("# controls={col_name}", fontsize=14)
+    g.set_titles("# controls={col_name}")
 
     for ax in g.axes.flatten():
-        ax.tick_params(labelsize=12, labelrotation=25)
+        ax.title.set_fontsize(font_size)
+        ax.set_ylabel(ax.get_ylabel(), fontsize=font_size)
+        ax.tick_params(labelsize=font_size, labelrotation=labelrotation)
 
     for ax, title in zip(g.axes[:, -1], g.row_names):
         ax.text(
@@ -85,16 +94,16 @@ def plot_simulation_results(
             verticalalignment="center",
             horizontalalignment="right",
             transform=ax.transAxes,
-            fontsize=14,
+            fontsize=font_size,
         )
 
-    plt.text(0.36, 1.0, title_x, fontsize=16, transform=plt.gcf().transFigure)
+    fig = g.figure
+    plt.text(0.36, 1.0, title_x, fontsize=font_size, transform=fig.transFigure)
     plt.text(
-        0.83, 0.45, title_y, fontsize=16, rotation=-90, transform=plt.gcf().transFigure
+        0.83, 0.45, title_y, fontsize=font_size, rotation=-90, transform=fig.transFigure
     )
 
-    if save_path is not None:
-        plt.savefig(f"figures/{save_path}.png", bbox_inches="tight")
-        plt.savefig(f"figures/{save_path}.svg")
-
+    fig.set_size_inches(len(g.col_names) * height * 1.2, len(g.row_names) * height)
     plt.show()
+
+    return fig
